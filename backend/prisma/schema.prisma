@@ -1,0 +1,58 @@
+// Prisma schema for MindWeave
+// Using SQLite for simplicity in local development
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// Represents an anonymous user identified by a browser-generated UUID
+model User {
+  id          String       @id @default(cuid())
+  anonymousId String       @unique
+  level       Int          @default(1)
+  badges      String       @default("[]") // JSON array of badge names
+  tags        String       @default("[]") // JSON array of accumulated tags
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  entries     Entry[]
+  memberships Membership[]
+}
+
+/// A journal entry with original text and AI-reframed text
+model Entry {
+  id           String   @id @default(cuid())
+  userId       String
+  framework    String   // "cbt" | "iceberg" | "growth"
+  originalText String
+  reframedText String
+  tags         String   @default("[]") // JSON array of extracted tags for this entry
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id])
+}
+
+/// A predefined think tank (collaborative group)
+model ThinkTank {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  description String
+  tags        String       @default("[]") // JSON array of interest tags
+  maxMembers  Int          @default(5)
+  memberships Membership[]
+}
+
+/// Links a user to a think tank they've joined
+model Membership {
+  id          String    @id @default(cuid())
+  userId      String
+  thinkTankId String
+  joinedAt    DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id])
+  thinkTank   ThinkTank @relation(fields: [thinkTankId], references: [id])
+
+  @@unique([userId, thinkTankId])
+}

@@ -9,6 +9,7 @@ import { ProfilePage } from "@/pages/ProfilePage";
 import { ThinkTanksPage } from "@/pages/ThinkTanksPage";
 import { ThinkTankDetailPage } from "@/pages/ThinkTankDetailPage";
 import { AuthPage } from "@/pages/AuthPage";
+import { ResetPasswordPage } from "@/pages/ResetPasswordPage";
 
 function AppRoutes() {
   const { isAuthenticated } = useUser();
@@ -16,6 +17,7 @@ function AppRoutes() {
   if (!isAuthenticated) {
     return (
       <Routes>
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="*" element={<AuthPage />} />
       </Routes>
     );
@@ -23,6 +25,7 @@ function AppRoutes() {
 
   return (
     <Routes>
+      <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route element={<Layout />}>
         <Route path="/" element={<HomePage />} />
         <Route path="/history" element={<HistoryPage />} />

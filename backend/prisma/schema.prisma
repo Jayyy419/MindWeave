@@ -25,6 +25,21 @@ model User {
   entries      Entry[]
   memberships  Membership[]
   messages     Message[]
+  resetTokens  PasswordResetToken[]
+}
+
+/// One-time password reset token sent via email
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 /// A journal entry with original text and AI-reframed text

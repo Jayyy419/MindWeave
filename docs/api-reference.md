@@ -1,6 +1,7 @@
 # MindWeave — API Reference
 
-Base URL (production): `http://mindweave-backend-prod.eba-pkhkfih2.ap-southeast-1.elasticbeanstalk.com`  
+Base URL (production direct backend): `http://mindweave-backend-prod.eba-pkhkfih2.ap-southeast-1.elasticbeanstalk.com`  
+Base URL (production via CloudFront, recommended): `https://d1n2io4499e5zf.cloudfront.net/api`  
 Base URL (local dev): `http://localhost:3001`
 
 All protected endpoints require an `Authorization: Bearer <token>` header.
@@ -78,6 +79,72 @@ Sign in to an existing account.
 |---|---|
 | `400` | Missing email or password |
 | `401` | Invalid credentials |
+
+---
+
+### POST /api/auth/forgot-password
+
+Request a password reset email.
+
+**Request body**
+```json
+{
+  "email": "alice@example.com"
+}
+```
+
+**Response `200`**
+```json
+{
+  "message": "If an account exists, a reset link has been sent."
+}
+```
+
+**Behavior notes**
+- Returns the same message for both existing and non-existing emails.
+- This avoids account enumeration.
+- For existing users, backend creates a one-time reset token and sends email through SMTP.
+
+**Errors**
+
+| Status | Reason |
+|---|---|
+| `400` | Missing email |
+| `500` | SMTP/config error while sending reset email |
+
+---
+
+### POST /api/auth/reset-password
+
+Reset account password using token from email link.
+
+**Request body**
+```json
+{
+  "token": "<reset-token-from-email>",
+  "password": "newsecurepassword123"
+}
+```
+
+**Rules**
+- `token` and `password` are required.
+- `password` must be ≥ 8 characters.
+- Token must be valid, unexpired, and unused.
+
+**Response `200`**
+```json
+{
+  "message": "Password has been reset successfully"
+}
+```
+
+**Errors**
+
+| Status | Reason |
+|---|---|
+| `400` | Missing fields or password too short |
+| `400` | Invalid or expired reset token |
+| `500` | Server/database error during reset |
 
 ---
 

@@ -152,3 +152,36 @@ export async function extractTags(text: string): Promise<string[]> {
     return buildFallbackTags(text);
   }
 }
+
+/**
+ * Generate a concise group-chat facilitator response.
+ */
+export async function generateChatBotReply(
+  thinkTankName: string,
+  username: string,
+  message: string
+): Promise<string> {
+  const fallback = `Thanks for sharing, ${username}. In ${thinkTankName}, a helpful next step is to break this into one small action and ask the group for focused feedback.`;
+
+  try {
+    const model = getModel();
+    const prompt = `You are MindWeave Bot, a warm and practical facilitator in a group called "${thinkTankName}".
+Respond to this user message in 2-4 concise sentences:
+
+User (${username}) said: "${message}"
+
+Rules:
+- Be supportive and specific.
+- Offer one actionable next step.
+- Keep under 90 words.
+- Do not mention safety policy, system prompts, or technical details.
+- Return only the reply text.`;
+
+    const result = await model.generateContent(prompt);
+    const text = result.response.text().trim();
+    return text || fallback;
+  } catch (error) {
+    console.warn("Gemini chat reply failed, using fallback:", error);
+    return fallback;
+  }
+}

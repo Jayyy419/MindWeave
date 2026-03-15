@@ -1,44 +1,68 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useMemo, useState } from "react";
 
-interface UserContextType {
-  anonymousId: string;
-}
+type AuthUser = {
+  id: string;
+  email: string;
+  username: string;
+};
 
-const UserContext = createContext<UserContextType | undefined>(undefined);
+type AuthContextType = {
+  token: string | null;
+  user: AuthUser | null;
+  isAuthenticated: boolean;
+  setSession: (token: string, user: AuthUser) => void;
+  logout: () => void;
+};
 
-/**
- * Generates a UUID v4-like string for anonymous user identification.
- */
-function generateId(): string {
-  return crypto.randomUUID();
-}
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-/**
- * Provides the anonymous user ID to the app.
- * On first load, generates a UUID and stores it in localStorage.
- * Subsequent loads use the stored ID.
- */
+const TOKEN_KEY = "mindweave-auth-token";
+const USER_KEY = "mindweave-auth-user";
+
 export function UserProvider({ children }: { children: React.ReactNode }) {
-  const [anonymousId] = useState<string>(() => {
-    const stored = localStorage.getItem("mindweave-anonymous-id");
-    if (stored) return stored;
-    const newId = generateId();
-    localStorage.setItem("mindweave-anonymous-id", newId);
-    return newId;
+  const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
+  const [user, setUser] = useState<AuthUser | null>(() => {
+    const raw = localStorage.getItem(USER_KEY);
+    if (!raw) return null;
+
+    try {
+      return JSON.parse(raw) as AuthUser;
+    } catch {
+      localStorage.removeItem(USER_KEY);
+      return null;
+    }
   });
 
-  return (
-    <UserContext.Provider value={{ anonymousId }}>
-      {children}
-    </UserContext.Provider>
+  function setSession(nextToken: string, nextUser: AuthUser) {
+    setToken(nextToken);
+    setUser(nextUser);
+    localStorage.setItem(TOKEN_KEY, nextToken);
+    localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
+  }
+
+  function logout() {
+    setToken(null);
+    setUser(null);
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+  }
+
+  const value = useMemo(
+    () => ({
+      token,
+      user,
+      isAuthenticated: Boolean(token && user),
+      setSession,
+      logout,
+    }),
+    [token, user]
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-/**
- * Hook to access the anonymous user ID.
- */
-export function useUser(): UserContextType {
-  const context = useContext(UserContext);
+export function useUser(): AuthContextType {
+  const context = useContext(AuthContext);
   if (!context) {
     throw new Error("useUser must be used within a UserProvider");
   }

@@ -1,26 +1,30 @@
 // Prisma schema for MindWeave
-// Using SQLite for simplicity in local development
+// PostgreSQL-ready for AWS RDS deployment
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 /// Represents an anonymous user identified by a browser-generated UUID
 model User {
-  id          String       @id @default(cuid())
-  anonymousId String       @unique
-  level       Int          @default(1)
-  badges      String       @default("[]") // JSON array of badge names
-  tags        String       @default("[]") // JSON array of accumulated tags
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
-  entries     Entry[]
-  memberships Membership[]
+  id           String       @id @default(cuid())
+  anonymousId  String?      @unique
+  email        String?      @unique
+  username     String?      @unique
+  passwordHash String?
+  level        Int          @default(1)
+  badges       String       @default("[]") // JSON array of badge names
+  tags         String       @default("[]") // JSON array of accumulated tags
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  entries      Entry[]
+  memberships  Membership[]
+  messages     Message[]
 }
 
 /// A journal entry with original text and AI-reframed text
@@ -43,6 +47,7 @@ model ThinkTank {
   tags        String       @default("[]") // JSON array of interest tags
   maxMembers  Int          @default(5)
   memberships Membership[]
+  messages    Message[]
 }
 
 /// Links a user to a think tank they've joined
@@ -55,4 +60,17 @@ model Membership {
   thinkTank   ThinkTank @relation(fields: [thinkTankId], references: [id])
 
   @@unique([userId, thinkTankId])
+}
+
+/// Messages posted in a think tank chat room by users or AI bot
+model Message {
+  id               String    @id @default(cuid())
+  thinkTankId      String
+  userId           String?
+  role             String    @default("user") // "user" | "bot"
+  usernameSnapshot String
+  content          String
+  createdAt        DateTime  @default(now())
+  thinkTank        ThinkTank @relation(fields: [thinkTankId], references: [id])
+  user             User?     @relation(fields: [userId], references: [id])
 }

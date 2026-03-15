@@ -1,209 +1,203 @@
 # MindWeave
 
-AI-enhanced journaling app that helps users reframe thoughts using therapeutic frameworks (CBT, Iceberg Model, Growth Mindset), profiles users via journal entries, and matches them into collaborative "think tanks."
+MindWeave is an AI-enhanced journaling and group reflection app with:
+- personal journal reframing (CBT, Iceberg, Growth)
+- gamification (level and badges)
+- think tanks (group matching)
+- authenticated group chat with AI facilitator responses
 
 ## Tech Stack
 
-- **Frontend:** React 18 + TypeScript + Vite + Tailwind CSS + shadcn/ui + React Router
-- **Backend:** Node.js + TypeScript + Express + Prisma + SQLite
-- **AI:** Google Gemini API (`@google/generative-ai`)
+- Frontend: React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui
+- Backend: Node.js, TypeScript, Express, Prisma
+- Database: PostgreSQL (AWS RDS/Aurora ready)
+- AI: Google Gemini API
 
----
-
-## 10-Day Development Plan
-
-### Day 1 – Project Setup & Scaffolding
-- Initialize backend: `npm init`, install Express, TypeScript, Prisma, dotenv, cors.
-- Initialize frontend: Vite + React + TypeScript template, Tailwind CSS, shadcn/ui.
-- Create folder structure for both backend and frontend.
-- Verify both servers start without errors.
-
-### Day 2 – Database Schema & Prisma
-- Define Prisma schema (User, Entry, ThinkTank, Membership models).
-- Run `npx prisma migrate dev` to create SQLite database.
-- Write seed script to populate predefined think tanks.
-- Test database operations with Prisma Studio (`npx prisma studio`).
-
-### Day 3 – Backend: Journal Entry API
-- Implement `POST /api/entries` (create entry, call Gemini for reframing).
-- Implement `GET /api/entries` (list entries for user).
-- Implement `GET /api/entries/:id` (single entry).
-- Add middleware for extracting `x-anonymous-id` header.
-- Test endpoints with Postman/curl.
-
-### Day 4 – Backend: AI Integration (Gemini)
-- Set up Gemini service with prompt templates for CBT, Iceberg, Growth Mindset.
-- Implement tag extraction via Gemini.
-- Handle API errors gracefully (rate limits, network issues).
-- Fine-tune prompts for quality responses.
-
-### Day 5 – Backend: Gamification & User Profile
-- Implement level calculation logic.
-- Implement badge logic (First Entry, Consistent, Deep Diver).
-- Implement `GET /api/user/profile`.
-- Add gamification update after each entry creation.
-
-### Day 6 – Backend: Think Tanks
-- Implement `GET /api/thinktanks` (list all).
-- Implement `GET /api/thinktanks/available` (filtered by user tags).
-- Implement `POST /api/thinktanks/:id/join`.
-- Test tag-matching logic.
-
-### Day 7 – Frontend: Journal Entry Form & History
-- Build journal entry form (text area + framework dropdown + submit).
-- Display reframed result after submission.
-- Build journal history list page.
-- Build entry detail view.
-
-### Day 8 – Frontend: User Profile & Gamification
-- Build profile page showing level, badges, tags.
-- Add visual indicators for badges (icons/labels).
-- Connect to backend profile API.
-
-### Day 9 – Frontend: Think Tanks & Navigation
-- Build think tanks list page.
-- Build individual think tank page (members list).
-- Add join functionality.
-- Polish navigation with React Router.
-
-### Day 10 – Polish, Testing & Documentation
-- End-to-end testing of all flows.
-- Error handling and loading states in UI.
-- Responsive design tweaks.
-- Final README updates and cleanup.
-
----
-
-## Setup Instructions
+## Local Development Setup
 
 ### Prerequisites
 
-- **Node.js** >= 18.x
-- **npm** >= 9.x
-- **Google Gemini API Key** – Get one at https://aistudio.google.com/app/apikey
+- Node.js 18+
+- npm 9+
+- PostgreSQL (local Docker/Postgres app or AWS RDS)
+- Gemini API key
 
-### 1. Clone / Download the Project
-
-```bash
-cd MindWeave_App
-```
-
-### 2. Backend Setup
+### 1. Backend
 
 ```bash
 cd backend
 npm install
+cp .env.example .env
 ```
 
-Create your `.env` file (or edit the existing one):
-```
-DATABASE_URL="file:./dev.db"
-GEMINI_API_KEY="your-gemini-api-key-here"
-PORT=3001
-```
+Edit `.env` values.
 
-Set up the database:
+Run migrations and seed:
+
 ```bash
-npx prisma migrate dev --name init
-npx prisma db seed
+npm run db:migrate
+npm run db:seed
 ```
 
-Start the backend server:
+Start backend:
+
 ```bash
 npm run dev
 ```
 
-The backend will run at `http://localhost:3001`.
+Backend runs on `http://localhost:3001`.
 
-### 3. Frontend Setup
+### 2. Frontend
 
-Open a new terminal:
 ```bash
 cd frontend
 npm install
-```
-
-Start the frontend dev server:
-```bash
 npm run dev
 ```
 
-The frontend will run at `http://localhost:5173`.
+Frontend runs on `http://localhost:5173`.
 
-### 4. Using the App
+## Core API Endpoints
 
-1. Open `http://localhost:5173` in your browser.
-2. An anonymous user ID is automatically generated and stored in localStorage.
-3. Write a journal entry, select a framework, and submit.
-4. View your reframed thoughts, journal history, profile (tags, level, badges), and available think tanks.
+### Auth
 
----
+- `POST /api/auth/register`
+- `POST /api/auth/login`
 
-## API Endpoints
+### Journal
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| POST | `/api/entries` | Create journal entry with AI reframing |
-| GET | `/api/entries` | List all entries for user |
-| GET | `/api/entries/:id` | Get single entry details |
-| GET | `/api/user/profile` | Get user profile (level, badges, tags) |
-| GET | `/api/thinktanks` | List all think tanks |
-| GET | `/api/thinktanks/available` | Think tanks matching user's tags |
-| POST | `/api/thinktanks/:id/join` | Join a think tank |
+- `POST /api/entries`
+- `GET /api/entries`
+- `GET /api/entries/:id`
 
-All endpoints expect `x-anonymous-id` header for user identification.
+### User
 
----
+- `GET /api/user/profile`
 
-## Project Structure
+### Think Tanks
 
+- `GET /api/thinktanks`
+- `GET /api/thinktanks/available`
+- `GET /api/thinktanks/:id`
+- `POST /api/thinktanks/:id/join`
+
+### Chat
+
+- `GET /api/thinktanks/:id/messages`
+- `POST /api/thinktanks/:id/messages`
+
+Authenticated endpoints expect `Authorization: Bearer <token>`.
+
+## AWS Deployment Sequence
+
+## 1) Create RDS PostgreSQL and Security Groups
+
+1. Create RDS PostgreSQL instance (or Aurora PostgreSQL).
+2. Create security group `mindweave-rds-sg`:
+- inbound `5432` from backend security group only.
+3. Create backend/app security group `mindweave-app-sg`.
+4. Set RDS to private subnets if possible.
+
+## 2) Prisma + Postgres Configuration
+
+Already done in this repo:
+- Prisma datasource provider switched to `postgresql`.
+
+Set runtime `DATABASE_URL` to your RDS connection string.
+
+## 3) Run Migrations in Target Environment
+
+In deployed backend container/instance:
+
+```bash
+npm run db:deploy
 ```
-MindWeave_App/
-├── backend/
-│   ├── prisma/
-│   │   ├── schema.prisma
-│   │   └── seed.ts
-│   ├── src/
-│   │   ├── index.ts
-│   │   ├── middleware/
-│   │   │   └── auth.ts
-│   │   ├── routes/
-│   │   │   ├── entries.ts
-│   │   │   ├── user.ts
-│   │   │   └── thinktanks.ts
-│   │   └── services/
-│   │       ├── gemini.ts
-│   │       └── gamification.ts
-│   ├── package.json
-│   ├── tsconfig.json
-│   └── .env
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── Layout.tsx
-│   │   │   ├── Navbar.tsx
-│   │   │   └── ui/ (shadcn components)
-│   │   ├── context/
-│   │   │   └── UserContext.tsx
-│   │   ├── lib/
-│   │   │   └── utils.ts
-│   │   ├── pages/
-│   │   │   ├── HomePage.tsx
-│   │   │   ├── HistoryPage.tsx
-│   │   │   ├── EntryDetailPage.tsx
-│   │   │   ├── ProfilePage.tsx
-│   │   │   ├── ThinkTanksPage.tsx
-│   │   │   └── ThinkTankDetailPage.tsx
-│   │   ├── services/
-│   │   │   └── api.ts
-│   │   ├── App.tsx
-│   │   ├── main.tsx
-│   │   └── index.css
-│   ├── components.json
-│   ├── package.json
-│   ├── tsconfig.json
-│   ├── vite.config.ts
-│   ├── tailwind.config.js
-│   └── postcss.config.js
-└── README.md
+
+Seed think tanks once (optional per environment):
+
+```bash
+npm run db:seed
 ```
+
+## 4) Containerize Backend and Deploy (ECS or Elastic Beanstalk)
+
+Backend Docker artifacts are included:
+- `backend/Dockerfile`
+- `backend/.dockerignore`
+
+### ECS Fargate path (recommended)
+
+1. Create ECR repo:
+
+```bash
+aws ecr create-repository --repository-name mindweave-backend
+```
+
+2. Build and push image:
+
+```bash
+cd backend
+aws ecr get-login-password --region <region> | docker login --username AWS --password-stdin <account>.dkr.ecr.<region>.amazonaws.com
+docker build -t mindweave-backend .
+docker tag mindweave-backend:latest <account>.dkr.ecr.<region>.amazonaws.com/mindweave-backend:latest
+docker push <account>.dkr.ecr.<region>.amazonaws.com/mindweave-backend:latest
+```
+
+3. Create ECS task definition using that image.
+4. Inject secrets/env vars from Secrets Manager.
+5. Run ECS service behind an Application Load Balancer.
+
+### Elastic Beanstalk path (simpler)
+
+1. Use Docker platform in Beanstalk.
+2. Point app to `backend/Dockerfile`.
+3. Configure environment variables/secrets.
+
+## 5) Deploy Frontend to S3 + CloudFront
+
+1. Build frontend:
+
+```bash
+cd frontend
+npm install
+npm run build
+```
+
+2. Upload `frontend/dist` to S3 static bucket.
+3. Create CloudFront distribution with S3 as origin.
+4. Configure `VITE_API_BASE_URL` before build using `frontend/.env.production.example`.
+
+Example value:
+
+```env
+VITE_API_BASE_URL="https://api.your-domain.com/api"
+```
+
+## 6) Store Secrets in AWS Secrets Manager
+
+Store these keys:
+- `DATABASE_URL`
+- `JWT_SECRET`
+- `GEMINI_API_KEY`
+- `CORS_ORIGIN`
+
+Grant ECS/Beanstalk IAM role permissions to read only required secrets.
+
+## Production Env Variables
+
+Backend expects:
+- `DATABASE_URL`
+- `JWT_SECRET`
+- `GEMINI_API_KEY`
+- `CORS_ORIGIN`
+- `PORT` (optional, default `3001`)
+
+Frontend build expects:
+- `VITE_API_BASE_URL`
+
+## Deployment Notes
+
+- Use `npm run db:deploy` in production, not `prisma migrate dev`.
+- Restrict CORS in production to your CloudFront/custom domain.
+- Keep RDS private and only reachable from backend services.
+- Rotate secrets regularly.

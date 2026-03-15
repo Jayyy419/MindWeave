@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import entriesRouter from "./routes/entries";
 import userRouter from "./routes/user";
 import thinkTanksRouter from "./routes/thinktanks";
+import authRouter from "./routes/auth";
 import { authMiddleware } from "./middleware/auth";
 
 // Load environment variables
@@ -11,15 +12,27 @@ dotenv.config();
 
 const app = express();
 const PORT = parseInt(process.env.PORT || "3001", 10);
+const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
 
 // Middleware
-app.use(cors());
+app.use(
+  cors({
+    origin: CORS_ORIGIN === "*" ? true : CORS_ORIGIN,
+  })
+);
 app.use(express.json());
 
 // Health check (no auth required)
+app.get("/", (_req, res) => {
+  res.status(200).send("MindWeave backend is running");
+});
+
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
 });
+
+// Authentication routes (no auth middleware required)
+app.use("/api/auth", authRouter);
 
 // All API routes require anonymous user identification
 app.use("/api/entries", authMiddleware, entriesRouter);

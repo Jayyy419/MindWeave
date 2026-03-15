@@ -1,7 +1,14 @@
 import { Request, Response, NextFunction } from "express";
 import { PrismaClient } from "@prisma/client";
+import jwt from "jsonwebtoken";
 
 const prisma = new PrismaClient();
+
+const JWT_SECRET = process.env.JWT_SECRET || "mindweave-dev-secret";
+
+interface TokenPayload {
+  userId: string;
+}
 
 /**
  * Middleware that extracts the anonymous user ID from the `x-anonymous-id` header.
@@ -13,12 +20,34 @@ export async function authMiddleware(
   res: Response,
   next: NextFunction
 ): Promise<void> {
+  const authorization = req.headers.authorization;
+
+  if (authorization?.startsWith("Bearer ")) {
+    try {
+      const token = authorization.substring("Bearer ".length);
+      const payload = jwt.verify(token, JWT_SECRET) as TokenPayload;
+
+      const user = await prisma.user.findUnique({ where: { id: payload.userId } });
+      if (!user) {
+        res.status(401).json({ error: "Invalid authentication token" });
+        return;
+      }
+
+      (req as any).userId = user.id;
+      (req as any).username = user.username || `User-${user.id.substring(0, 6)}`;
+      next();
+      return;
+    } catch {
+      res.status(401).json({ error: "Invalid or expired token" });
+      return;
+    }
+  }
+
+  // Backward-compatible anonymous mode for existing clients.
   const anonymousId = req.headers["x-anonymous-id"] as string | undefined;
 
   if (!anonymousId) {
-    res
-      .status(400)
-      .json({ error: "Missing x-anonymous-id header" });
+    res.status(401).json({ error: "Missing authentication token" });
     return;
   }
 
@@ -35,5 +64,6 @@ export async function authMiddleware(
 
   // Attach the internal user ID to the request object
   (req as any).userId = user.id;
+  (req as any).username = user.username || `User-${user.id.substring(0, 6)}`;
   next();
 }

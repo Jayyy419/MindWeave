@@ -1,0 +1,386 @@
+# MindWeave — API Reference
+
+Base URL (production): `http://mindweave-backend-prod.eba-pkhkfih2.ap-southeast-1.elasticbeanstalk.com`  
+Base URL (local dev): `http://localhost:3001`
+
+All protected endpoints require an `Authorization: Bearer <token>` header.
+
+---
+
+## Authentication
+
+### POST /api/auth/register
+
+Create a new account.
+
+**Request body**
+```json
+{
+  "email": "alice@example.com",
+  "username": "alice",
+  "password": "mypassword123"
+}
+```
+
+**Rules**
+- `email`, `username`, `password` are all required
+- `password` must be ≥ 8 characters
+- `email` and `username` must be unique
+
+**Response `201`**
+```json
+{
+  "token": "<jwt>",
+  "user": {
+    "id": "clxxx",
+    "email": "alice@example.com",
+    "username": "alice"
+  }
+}
+```
+
+**Errors**
+
+| Status | Reason |
+|---|---|
+| `400` | Missing fields or password too short |
+| `409` | Email or username already taken |
+
+---
+
+### POST /api/auth/login
+
+Sign in to an existing account.
+
+**Request body**
+```json
+{
+  "email": "alice@example.com",
+  "password": "mypassword123"
+}
+```
+
+**Response `200`**
+```json
+{
+  "token": "<jwt>",
+  "user": {
+    "id": "clxxx",
+    "email": "alice@example.com",
+    "username": "alice"
+  }
+}
+```
+
+**Errors**
+
+| Status | Reason |
+|---|---|
+| `400` | Missing email or password |
+| `401` | Invalid credentials |
+
+---
+
+## Journal Entries
+
+All routes require authentication.
+
+### POST /api/entries
+
+Create a new journal entry. The backend calls Gemini to produce a reframed version and extract tags.
+
+**Request body**
+```json
+{
+  "text": "I keep making mistakes at work and I feel useless.",
+  "framework": "cbt"
+}
+```
+
+`framework` must be one of: `"cbt"`, `"iceberg"`, `"growth"`  
+`text` must be ≤ 5 000 characters.
+
+**Response `201`**
+```json
+{
+  "id": "clyyy",
+  "framework": "cbt",
+  "originalText": "I keep making mistakes at work and I feel useless.",
+  "reframedText": "Everyone makes mistakes — they're opportunities to learn ...",
+  "tags": ["work-stress", "self-worth"],
+  "createdAt": "2026-03-15T12:00:00.000Z"
+}
+```
+
+**Errors**
+
+| Status | Reason |
+|---|---|
+| `400` | Missing / empty text, invalid framework, text > 5 000 chars |
+| `401` | No or invalid JWT |
+| `500` | Gemini API failure |
+
+---
+
+### GET /api/entries
+
+List all entries for the authenticated user, newest first. Returns a 120-character preview of the original text.
+
+**Response `200`**
+```json
+[
+  {
+    "id": "clyyy",
+    "framework": "cbt",
+    "preview": "I keep making mistakes at work and I feel useless.",
+    "createdAt": "2026-03-15T12:00:00.000Z"
+  }
+]
+```
+
+---
+
+### GET /api/entries/:id
+
+Get the full detail of one entry. Only accessible to the entry's owner.
+
+**Response `200`**
+```json
+{
+  "id": "clyyy",
+  "framework": "cbt",
+  "originalText": "...",
+  "reframedText": "...",
+  "tags": ["work-stress"],
+  "createdAt": "2026-03-15T12:00:00.000Z"
+}
+```
+
+**Errors**
+
+| Status | Reason |
+|---|---|
+| `404` | Entry not found or belongs to another user |
+
+---
+
+## Think Tanks
+
+All routes require authentication.
+
+### GET /api/thinktanks
+
+List all think tanks with their member counts.
+
+**Response `200`**
+```json
+[
+  {
+    "id": "clzzz",
+    "name": "Anxiety & Stress",
+    "description": "A safe space to share and reframe anxiety.",
+    "tags": ["anxiety", "stress"],
+    "maxMembers": 5,
+    "memberCount": 3
+  }
+]
+```
+
+---
+
+### GET /api/thinktanks/available
+
+Return think tanks that match the authenticated user's accumulated tags. Requires ≥ 3 journal entries.
+
+**Response `200` (user has < 3 entries)**
+```json
+{
+  "message": "Write at least 3 journal entries to unlock think tank matching.",
+  "available": []
+}
+```
+
+**Response `200` (after 3+ entries)**
+```json
+{
+  "available": [
+    {
+      "id": "clzzz",
+      "name": "Anxiety & Stress",
+      "tags": ["anxiety", "stress"],
+      "maxMembers": 5,
+      "memberCount": 3,
+      "isFull": false,
+      "isJoined": false
+    }
+  ]
+}
+```
+
+---
+
+### GET /api/thinktanks/:id
+
+Get details of one think tank including its member list.
+
+**Response `200`**
+```json
+{
+  "id": "clzzz",
+  "name": "Anxiety & Stress",
+  "description": "...",
+  "tags": ["anxiety", "stress"],
+  "maxMembers": 5,
+  "members": [
+    {
+      "userId": "clxxx",
+      "username": "alice",
+      "level": 2,
+      "joinedAt": "2026-03-15T12:00:00.000Z"
+    }
+  ],
+  "isJoined": false
+}
+```
+
+---
+
+### POST /api/thinktanks/:id/join
+
+Join a think tank. Maximum 5 members per tank.
+
+**No request body required.**
+
+**Response `201`**
+```json
+{ "message": "Successfully joined think tank" }
+```
+
+**Errors**
+
+| Status | Reason |
+|---|---|
+| `400` | Already a member |
+| `400` | Think tank is full |
+| `404` | Think tank not found |
+
+---
+
+### GET /api/thinktanks/:id/messages
+
+Fetch the last 100 messages in the think tank chat room. Requires membership.
+
+**Response `200`**
+```json
+[
+  {
+    "id": "msgaaa",
+    "role": "user",
+    "usernameSnapshot": "alice",
+    "content": "Has anyone else struggled with imposter syndrome?",
+    "createdAt": "2026-03-15T12:00:00.000Z"
+  },
+  {
+    "id": "msgbbb",
+    "role": "bot",
+    "usernameSnapshot": "MindWeave Bot",
+    "content": "Imposter syndrome is extremely common ...",
+    "createdAt": "2026-03-15T12:00:01.000Z"
+  }
+]
+```
+
+**Errors**
+
+| Status | Reason |
+|---|---|
+| `403` | Not a member of this think tank |
+
+---
+
+### POST /api/thinktanks/:id/messages
+
+Post a message to the group chat. The backend automatically generates and saves an AI bot reply in the same response.
+
+**Request body**
+```json
+{ "content": "Has anyone else struggled with imposter syndrome?" }
+```
+
+**Response `201`** — array of `[userMessage, botMessage]`
+```json
+[
+  {
+    "id": "msgaaa",
+    "role": "user",
+    "usernameSnapshot": "alice",
+    "content": "Has anyone else struggled with imposter syndrome?",
+    "createdAt": "2026-03-15T12:00:00.000Z"
+  },
+  {
+    "id": "msgbbb",
+    "role": "bot",
+    "usernameSnapshot": "MindWeave Bot",
+    "content": "Imposter syndrome is extremely common...",
+    "createdAt": "2026-03-15T12:00:01.000Z"
+  }
+]
+```
+
+**Errors**
+
+| Status | Reason |
+|---|---|
+| `400` | Empty message content |
+| `403` | Not a member of this think tank |
+
+---
+
+## User Profile
+
+### GET /api/user/profile
+
+Returns the authenticated user's gamification stats.
+
+**Response `200`**
+```json
+{
+  "level": 2,
+  "badges": ["First Step", "Explorer"],
+  "tags": ["anxiety", "work-stress", "self-worth"],
+  "entryCount": 8,
+  "createdAt": "2026-03-15T10:00:00.000Z"
+}
+```
+
+---
+
+## Health & Status
+
+### GET /
+
+Health ping for load balancers. No auth required.
+
+**Response `200`** — plain text
+```
+MindWeave backend is running
+```
+
+### GET /api/health
+
+Structured health check.
+
+**Response `200`**
+```json
+{ "status": "ok", "timestamp": "2026-03-15T12:00:00.000Z" }
+```
+
+---
+
+## Error Format
+
+All error responses use this shape:
+
+```json
+{ "error": "Human-readable error message" }
+```

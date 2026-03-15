@@ -1,5 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { BookOpen, User, Users, PenLine } from "lucide-react";
+import { useUser } from "@/context/UserContext";
+import { Button } from "@/components/ui/button";
 
 const navItems = [
   { to: "/", label: "Journal", icon: PenLine },
@@ -10,6 +12,7 @@ const navItems = [
 
 export function Navbar() {
   const location = useLocation();
+  const { user, logout } = useUser();
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -45,6 +48,15 @@ export function Navbar() {
             );
           })}
         </nav>
+
+        <div className="ml-auto flex items-center gap-2">
+          <span className="hidden text-sm text-muted-foreground sm:inline">
+            @{user?.username}
+          </span>
+          <Button variant="outline" size="sm" onClick={logout}>
+            Logout
+          </Button>
+        </div>
       </div>
     </header>
   );

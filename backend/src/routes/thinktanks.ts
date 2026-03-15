@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
+import { generateChatBotReply } from "../services/gemini";
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -115,7 +116,7 @@ router.get("/:id", async (req: Request, res: Response): Promise<void> => {
             user: {
               select: {
                 id: true,
-                anonymousId: true,
+                username: true,
                 level: true,
               },
             },
@@ -135,13 +136,13 @@ router.get("/:id", async (req: Request, res: Response): Promise<void> => {
       description: tank.description,
       tags: JSON.parse(tank.tags),
       maxMembers: tank.maxMembers,
-      members: tank.memberships.map((m: any) => ({
+      members: tank.memberships.map((m) => ({
         userId: m.user.id,
-        anonymousId: m.user.anonymousId.substring(0, 8) + "...",
+        username: m.user.username || `User-${m.user.id.substring(0, 6)}`,
         level: m.user.level,
         joinedAt: m.joinedAt,
       })),
-      isJoined: tank.memberships.some((m: any) => m.userId === userId),
+      isJoined: tank.memberships.some((m) => m.userId === userId),
     });
   } catch (error) {
     console.error("Error fetching think tank:", error);
@@ -172,16 +173,14 @@ router.post(
       }
 
       // Check if already a member
-      const existingMembership = (tank as any).memberships.find(
-        (m: any) => m.userId === userId
-      );
+      const existingMembership = tank.memberships.find((m) => m.userId === userId);
       if (existingMembership) {
         res.status(400).json({ error: "Already a member of this think tank" });
         return;
       }
 
       // Check capacity
-      if ((tank as any).memberships.length >= tank.maxMembers) {
+      if (tank.memberships.length >= tank.maxMembers) {
         res.status(400).json({ error: "This think tank is full" });
         return;
       }
@@ -201,5 +200,124 @@ router.post(
     }
   }
 );
+
+/**
+ * GET /api/thinktanks/:id/messages
+ * Fetch recent chat messages for a think tank (members only).
+ */
+router.get("/:id/messages", async (req: Request, res: Response): Promise<void> => {
+  const userId = (req as any).userId as string;
+  const id = req.params.id as string;
+
+  try {
+    const membership = await prisma.membership.findUnique({
+      where: {
+        userId_thinkTankId: {
+          userId,
+          thinkTankId: id,
+        },
+      },
+    });
+
+    if (!membership) {
+      res.status(403).json({ error: "Join this think tank before accessing chat" });
+      return;
+    }
+
+    const messages = await prisma.message.findMany({
+      where: { thinkTankId: id },
+      orderBy: { createdAt: "asc" },
+      take: 100,
+      select: {
+        id: true,
+        role: true,
+        usernameSnapshot: true,
+        content: true,
+        createdAt: true,
+      },
+    });
+
+    res.json(messages);
+  } catch (error) {
+    console.error("Error fetching chat messages:", error);
+    res.status(500).json({ error: "Failed to fetch chat messages" });
+  }
+});
+
+/**
+ * POST /api/thinktanks/:id/messages
+ * Post a chat message and auto-generate AI bot facilitator reply.
+ */
+router.post("/:id/messages", async (req: Request, res: Response): Promise<void> => {
+  const userId = (req as any).userId as string;
+  const username = (req as any).username as string;
+  const id = req.params.id as string;
+  const content = (req.body?.content as string | undefined)?.trim();
+
+  if (!content) {
+    res.status(400).json({ error: "content is required" });
+    return;
+  }
+
+  if (content.length > 1000) {
+    res.status(400).json({ error: "content must be 1000 characters or fewer" });
+    return;
+  }
+
+  try {
+    const tank = await prisma.thinkTank.findUnique({ where: { id } });
+    if (!tank) {
+      res.status(404).json({ error: "Think tank not found" });
+      return;
+    }
+
+    const membership = await prisma.membership.findUnique({
+      where: {
+        userId_thinkTankId: {
+          userId,
+          thinkTankId: id,
+        },
+      },
+    });
+
+    if (!membership) {
+      res.status(403).json({ error: "Join this think tank before sending messages" });
+      return;
+    }
+
+    const userMessage = await prisma.message.create({
+      data: {
+        thinkTankId: id,
+        userId,
+        role: "user",
+        usernameSnapshot: username,
+        content,
+      },
+    });
+
+    const shouldTriggerBot = content.startsWith("/ask") || content.startsWith("@bot") || content.length > 40;
+
+    let botMessage = null;
+    if (shouldTriggerBot) {
+      const botReply = await generateChatBotReply(tank.name, username, content);
+      botMessage = await prisma.message.create({
+        data: {
+          thinkTankId: id,
+          role: "bot",
+          usernameSnapshot: "MindWeave Bot",
+          content: botReply,
+        },
+      });
+    }
+
+    res.status(201).json({
+      userMessage,
+      botMessage,
+    });
+  } catch (error) {
+    console.error("Error sending chat message:", error);
+    res.status(500).json({ error: "Failed to send message" });
+  }
+});
 
 export default router;

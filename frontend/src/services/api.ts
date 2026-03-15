@@ -1,20 +1,67 @@
 /**
  * API service layer for MindWeave frontend.
- * All requests include the x-anonymous-id header for user identification.
+ * Authenticated requests include JWT token in Authorization header.
  * The Vite dev server proxies /api requests to the backend at localhost:3001.
  */
 
 const API_BASE = "/api";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || API_BASE;
 
-function getAnonymousId(): string {
-  return localStorage.getItem("mindweave-anonymous-id") || "";
+const TOKEN_KEY = "mindweave-auth-token";
+
+function getAuthToken(): string {
+  return localStorage.getItem(TOKEN_KEY) || "";
 }
 
 function headers(): HeadersInit {
+  const token = getAuthToken();
+
   return {
     "Content-Type": "application/json",
-    "x-anonymous-id": getAnonymousId(),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
+}
+
+export type AuthResponse = {
+  token: string;
+  user: {
+    id: string;
+    email: string;
+    username: string;
+  };
+};
+
+export async function register(data: {
+  email: string;
+  username: string;
+  password: string;
+}): Promise<AuthResponse> {
+  const res = await fetch(`${API_BASE_URL}/auth/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to register");
+  }
+  return res.json();
+}
+
+export async function login(data: {
+  email: string;
+  password: string;
+}): Promise<AuthResponse> {
+  const res = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to login");
+  }
+  return res.json();
 }
 
 // ── Entry Types ──
@@ -71,18 +118,26 @@ export interface ThinkTankDetail {
   maxMembers: number;
   members: {
     userId: string;
-    anonymousId: string;
+    username: string;
     level: number;
     joinedAt: string;
   }[];
   isJoined: boolean;
 }
 
+export interface ChatMessage {
+  id: string;
+  role: "user" | "bot";
+  usernameSnapshot: string;
+  content: string;
+  createdAt: string;
+}
+
 // ── API Functions ──
 
 /** Create a new journal entry with AI reframing */
 export async function createEntry(data: CreateEntryRequest): Promise<EntryDetail> {
-  const res = await fetch(`${API_BASE}/entries`, {
+  const res = await fetch(`${API_BASE_URL}/entries`, {
     method: "POST",
     headers: headers(),
     body: JSON.stringify(data),
@@ -96,14 +151,14 @@ export async function createEntry(data: CreateEntryRequest): Promise<EntryDetail
 
 /** List all journal entries for the current user */
 export async function listEntries(): Promise<EntryPreview[]> {
-  const res = await fetch(`${API_BASE}/entries`, { headers: headers() });
+  const res = await fetch(`${API_BASE_URL}/entries`, { headers: headers() });
   if (!res.ok) throw new Error("Failed to fetch entries");
   return res.json();
 }
 
 /** Get a single journal entry by ID */
 export async function getEntry(id: string): Promise<EntryDetail> {
-  const res = await fetch(`${API_BASE}/entries/${encodeURIComponent(id)}`, {
+  const res = await fetch(`${API_BASE_URL}/entries/${encodeURIComponent(id)}`, {
     headers: headers(),
   });
   if (!res.ok) throw new Error("Failed to fetch entry");
@@ -112,14 +167,14 @@ export async function getEntry(id: string): Promise<EntryDetail> {
 
 /** Get the current user's profile */
 export async function getProfile(): Promise<UserProfile> {
-  const res = await fetch(`${API_BASE}/user/profile`, { headers: headers() });
+  const res = await fetch(`${API_BASE_URL}/user/profile`, { headers: headers() });
   if (!res.ok) throw new Error("Failed to fetch profile");
   return res.json();
 }
 
 /** List all think tanks */
 export async function listThinkTanks(): Promise<ThinkTankPreview[]> {
-  const res = await fetch(`${API_BASE}/thinktanks`, { headers: headers() });
+  const res = await fetch(`${API_BASE_URL}/thinktanks`, { headers: headers() });
   if (!res.ok) throw new Error("Failed to fetch think tanks");
   return res.json();
 }
@@ -129,7 +184,7 @@ export async function listAvailableThinkTanks(): Promise<{
   message?: string;
   available: ThinkTankPreview[];
 }> {
-  const res = await fetch(`${API_BASE}/thinktanks/available`, {
+  const res = await fetch(`${API_BASE_URL}/thinktanks/available`, {
     headers: headers(),
   });
   if (!res.ok) throw new Error("Failed to fetch available think tanks");
@@ -138,7 +193,7 @@ export async function listAvailableThinkTanks(): Promise<{
 
 /** Get details of a single think tank */
 export async function getThinkTank(id: string): Promise<ThinkTankDetail> {
-  const res = await fetch(`${API_BASE}/thinktanks/${encodeURIComponent(id)}`, {
+  const res = await fetch(`${API_BASE_URL}/thinktanks/${encodeURIComponent(id)}`, {
     headers: headers(),
   });
   if (!res.ok) throw new Error("Failed to fetch think tank");
@@ -147,12 +202,35 @@ export async function getThinkTank(id: string): Promise<ThinkTankDetail> {
 
 /** Join a think tank */
 export async function joinThinkTank(id: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/thinktanks/${encodeURIComponent(id)}/join`, {
+  const res = await fetch(`${API_BASE_URL}/thinktanks/${encodeURIComponent(id)}/join`, {
     method: "POST",
     headers: headers(),
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || "Failed to join think tank");
+  }
+}
+
+export async function listThinkTankMessages(id: string): Promise<ChatMessage[]> {
+  const res = await fetch(`${API_BASE_URL}/thinktanks/${encodeURIComponent(id)}/messages`, {
+    headers: headers(),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to fetch messages");
+  }
+  return res.json();
+}
+
+export async function sendThinkTankMessage(id: string, content: string): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/thinktanks/${encodeURIComponent(id)}/messages`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify({ content }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to send message");
   }
 }

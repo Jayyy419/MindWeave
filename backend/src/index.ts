@@ -14,10 +14,27 @@ const app = express();
 const PORT = parseInt(process.env.PORT || "3001", 10);
 const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
 
+const allowedOrigins = CORS_ORIGIN.split(",")
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+
+const corsOrigin: cors.CorsOptions["origin"] =
+  allowedOrigins.length === 1 && allowedOrigins[0] === "*"
+    ? true
+    : (origin, callback) => {
+        // Allow non-browser requests with no Origin header.
+        if (!origin) {
+          callback(null, true);
+          return;
+        }
+
+        callback(null, allowedOrigins.includes(origin));
+      };
+
 // Middleware
 app.use(
   cors({
-    origin: CORS_ORIGIN === "*" ? true : CORS_ORIGIN,
+    origin: corsOrigin,
   })
 );
 app.use(express.json());

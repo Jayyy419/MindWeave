@@ -9,7 +9,7 @@ import {
   joinThinkTank,
   type ThinkTankPreview,
 } from "@/services/api";
-import { Loader2, Users, Lock, CheckCircle } from "lucide-react";
+import { Loader2, Users, Lock, CheckCircle, Sparkles, ArrowRight } from "lucide-react";
 
 export function ThinkTanksPage() {
   const [allTanks, setAllTanks] = useState<ThinkTankPreview[]>([]);
@@ -71,21 +71,26 @@ export function ThinkTanksPage() {
   const availableIds = new Set(availableTanks.map((t) => t.id));
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
-      <div className="flex items-center gap-2">
-        <Users className="h-6 w-6 text-purple-600" />
-        <h1 className="text-2xl font-bold">Think Tanks</h1>
+    <div className="mx-auto max-w-5xl space-y-6">
+      <div className="rounded-2xl border border-amber-200/80 bg-[linear-gradient(145deg,#fff9ee_0%,#fffef7_45%,#f8f8ef_100%)] p-5 shadow-[0_16px_44px_-30px_rgba(74,53,21,0.45)]">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Users className="h-6 w-6 text-amber-700" />
+            <h1 className="text-2xl font-bold text-stone-800">Think Tanks</h1>
+          </div>
+          <Badge variant="outline" className="border-amber-300 bg-white/70 text-stone-700">
+            {allTanks.length} group{allTanks.length === 1 ? "" : "s"}
+          </Badge>
+        </div>
+        <p className="mt-3 text-sm leading-6 text-stone-600">
+          Small, focused peer spaces for reflective growth. Write at least 3 journal entries to unlock matching based on your themes.
+        </p>
       </div>
 
-      <p className="text-muted-foreground text-sm">
-        Think tanks are small groups of like-minded individuals. Write at least 3
-        journal entries to unlock matching based on your interests.
-      </p>
-
       {matchMessage && (
-        <Card className="border-amber-200 bg-amber-50">
+        <Card className="border-amber-200/80 bg-amber-50/70 shadow-none">
           <CardContent className="py-3">
-            <p className="text-sm text-amber-800 flex items-center gap-2">
+            <p className="flex items-center gap-2 text-sm text-amber-900">
               <Lock className="h-4 w-4" />
               {matchMessage}
             </p>
@@ -93,37 +98,48 @@ export function ThinkTanksPage() {
         </Card>
       )}
 
-      {/* Available Think Tanks (matched to user) */}
       {availableTanks.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="text-lg font-semibold text-purple-700">
-            Matched for You
-          </h2>
-          {availableTanks.map((tank) => (
+        <section className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-amber-700" />
+            <h2 className="text-lg font-semibold text-stone-800">Matched for You</h2>
+            <Badge variant="outline" className="border-amber-300 bg-white/70 text-xs text-stone-700">
+              {availableTanks.length}
+            </Badge>
+          </div>
+          <div className="space-y-4">
+            {availableTanks.map((tank) => (
+              <ThinkTankCard
+                key={tank.id}
+                tank={tank}
+                isAvailable
+                joiningId={joiningId}
+                onJoin={handleJoin}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      <section className="space-y-3">
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-stone-800">All Think Tanks</h2>
+          <Badge variant="outline" className="border-amber-300 bg-white/70 text-xs text-stone-700">
+            {allTanks.length}
+          </Badge>
+        </div>
+        <div className="space-y-4">
+          {allTanks.map((tank) => (
             <ThinkTankCard
               key={tank.id}
               tank={tank}
-              isAvailable
+              isAvailable={availableIds.has(tank.id)}
               joiningId={joiningId}
               onJoin={handleJoin}
             />
           ))}
         </div>
-      )}
-
-      {/* All Think Tanks */}
-      <div className="space-y-3">
-        <h2 className="text-lg font-semibold">All Think Tanks</h2>
-        {allTanks.map((tank) => (
-          <ThinkTankCard
-            key={tank.id}
-            tank={tank}
-            isAvailable={availableIds.has(tank.id)}
-            joiningId={joiningId}
-            onJoin={handleJoin}
-          />
-        ))}
-      </div>
+      </section>
     </div>
   );
 }
@@ -142,29 +158,31 @@ function ThinkTankCard({
   return (
     <Link to={`/thinktanks/${tank.id}`}>
       <Card
-        className={`hover:shadow-md transition-shadow ${
-          isAvailable ? "border-purple-200" : ""
+        className={`border-amber-200/80 bg-[repeating-linear-gradient(to_bottom,#fffef9_0px,#fffef9_30px,#ece7dc_31px)] shadow-[0_16px_40px_-30px_rgba(74,53,21,0.35)] transition-all hover:-translate-y-0.5 hover:shadow-[0_20px_46px_-28px_rgba(74,53,21,0.45)] ${
+          isAvailable ? "ring-1 ring-amber-300/70" : ""
         }`}
       >
-        <CardContent className="py-4 space-y-3">
-          <div className="flex items-start justify-between gap-2">
+        <CardHeader className="pb-2 pt-4">
+          <div className="flex items-start justify-between gap-3">
             <div>
-              <h3 className="font-semibold">{tank.name}</h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                {tank.description}
-              </p>
+              <CardTitle className="text-base text-stone-800">{tank.name}</CardTitle>
+              <p className="mt-1 text-sm leading-6 text-stone-600">{tank.description}</p>
             </div>
-            <span className="text-xs text-muted-foreground whitespace-nowrap">
+            <span className="whitespace-nowrap rounded-md border border-amber-300 bg-white/80 px-2 py-1 text-xs text-stone-700">
               {tank.memberCount}/{tank.maxMembers} members
             </span>
           </div>
-
-          <div className="flex flex-wrap gap-1">
-            {tank.tags.map((tag) => (
-              <Badge key={tag} variant="outline" className="text-xs">
-                {tag}
-              </Badge>
-            ))}
+        </CardHeader>
+        <CardContent className="space-y-3 pb-4">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex flex-wrap gap-1.5">
+              {tank.tags.map((tag) => (
+                <Badge key={tag} variant="outline" className="border-amber-300 bg-white/70 text-xs text-stone-700">
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+            <ArrowRight className="mt-0.5 h-4 w-4 text-amber-700/70" />
           </div>
 
           {isAvailable && !tank.isJoined && !tank.isFull && (
@@ -174,6 +192,7 @@ function ThinkTankCard({
                 e.preventDefault();
                 onJoin(tank.id);
               }}
+              className="bg-emerald-700 text-emerald-50 hover:bg-emerald-800"
               disabled={joiningId === tank.id}
             >
               {joiningId === tank.id ? (
@@ -183,13 +202,13 @@ function ThinkTankCard({
             </Button>
           )}
           {tank.isJoined && (
-            <div className="flex items-center gap-1 text-sm text-green-600">
+            <div className="flex items-center gap-1 text-sm text-emerald-700">
               <CheckCircle className="h-4 w-4" />
               Joined
             </div>
           )}
           {tank.isFull && !tank.isJoined && (
-            <p className="text-sm text-muted-foreground">This tank is full</p>
+            <p className="text-sm text-stone-500">This tank is full</p>
           )}
         </CardContent>
       </Card>

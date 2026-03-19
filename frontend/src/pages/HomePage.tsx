@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { createEntry, previewReframe } from "@/services/api";
-import { CalendarDays, Heart, Loader2, Pencil, Trash2, X } from "lucide-react";
+import { CalendarDays, Heart, Info, Loader2, Pencil, Trash2, X } from "lucide-react";
 
 const FRAMEWORKS = [
   {
@@ -57,6 +57,7 @@ const MOODS = [
   { value: "stressed", label: "Stressed" },
   { value: "tired", label: "Tired" },
   { value: "excited", label: "Excited" },
+  { value: "other", label: "Other" },
 ];
 
 const REFLECTION_PROMPTS = [
@@ -99,6 +100,7 @@ export function HomePage() {
   const [editingUserText, setEditingUserText] = useState("");
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState("");
+  const [showMoodInfo, setShowMoodInfo] = useState(false);
   const liveRequestId = useRef(0);
 
   const selectedFramework = useMemo(
@@ -516,14 +518,6 @@ export function HomePage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="rounded-2xl border border-amber-200/80 bg-white/65 p-4 backdrop-blur-sm">
-              <div className="mb-3 flex flex-wrap items-center gap-2">
-                {lastSavedAt && (
-                  <span className="text-xs text-stone-500">
-                    Draft saved at {lastSavedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                  </span>
-                )}
-              </div>
-
               <input
                 type="text"
                 value={title}
@@ -537,7 +531,7 @@ export function HomePage() {
 
               <div className="relative rounded-xl border border-amber-100 bg-[repeating-linear-gradient(to_bottom,#fffef9_0px,#fffef9_30px,#ece7dc_31px)] p-4">
                 <div className="pointer-events-none absolute inset-y-0 left-8 w-px bg-rose-200/80" />
-                <div className="min-h-[320px] space-y-3 pl-8 pr-2 text-[17px] leading-[31px]" style={{ fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif" }}>
+                <div className="flex min-h-[320px] flex-col space-y-3 pl-8 pr-2 text-[17px] leading-[31px]" style={{ fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif" }}>
                   {chunks.map((chunk) => (
                     <div key={chunk.id} className="rounded-md border border-amber-100/80 bg-white/50 p-2">
 
@@ -621,7 +615,7 @@ export function HomePage() {
                         setError("");
                       }
                     }}
-                    className="min-h-[140px] w-full resize-y border-0 bg-transparent p-0 text-[17px] leading-[31px] text-stone-800 placeholder:text-stone-400 focus:outline-none"
+                    className="min-h-[140px] w-full flex-1 resize-none border-0 bg-transparent p-0 text-[17px] leading-[31px] text-stone-800 placeholder:text-stone-400 focus:outline-none"
                     style={{ fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif" }}
                     disabled={loading || !isConfigLocked}
                   />
@@ -674,7 +668,17 @@ export function HomePage() {
           <aside className="space-y-4">
             <Card className="border-amber-200/70 bg-white/80 shadow-none">
               <CardHeader className="pb-3">
-                <CardTitle className="text-base text-stone-800">How are you feeling?</CardTitle>
+                <div className="flex items-center gap-2">
+                  <CardTitle className="text-base text-stone-800">How are you feeling?</CardTitle>
+                  <button
+                    type="button"
+                    onClick={() => setShowMoodInfo(true)}
+                    className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
+                    aria-label="What is this section for?"
+                  >
+                    <Info className="h-3 w-3" />
+                  </button>
+                </div>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="flex flex-wrap gap-2">
@@ -682,7 +686,7 @@ export function HomePage() {
                     <button
                       type="button"
                       key={moodOption.value}
-                      onClick={() => setMood(moodOption.value)}
+                      onClick={() => setMood(mood === moodOption.value ? "" : moodOption.value)}
                       className={`rounded-full border px-3 py-1.5 text-xs transition-colors ${
                         mood === moodOption.value
                           ? "border-emerald-700 bg-emerald-700 text-white"
@@ -701,7 +705,7 @@ export function HomePage() {
                   <input
                     value={intention}
                     onChange={(e) => setIntention(e.target.value)}
-                    placeholder="ex: process my stress"
+                    placeholder="E.g. reflect on today's challenges and find clarity"
                     className="w-full rounded-md border border-amber-200 bg-white px-3 py-2 text-sm text-stone-700 outline-none focus:ring-2 focus:ring-emerald-700/30"
                     maxLength={80}
                     disabled={loading}
@@ -717,6 +721,43 @@ export function HomePage() {
                 )}
               </CardContent>
             </Card>
+
+            {showMoodInfo && (
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4"
+                onClick={() => setShowMoodInfo(false)}
+                role="presentation"
+              >
+                <div
+                  className="w-full max-w-md rounded-2xl border border-amber-200 bg-[linear-gradient(160deg,#fff9ec_0%,#fffef7_45%,#f8f8ef_100%)] p-6 shadow-lg"
+                  onClick={(e) => e.stopPropagation()}
+                  role="dialog"
+                  aria-modal="true"
+                >
+                  <div className="mb-4 flex items-start justify-between">
+                    <h3 className="text-lg font-semibold text-stone-800">About This Section</h3>
+                    <button
+                      type="button"
+                      onClick={() => setShowMoodInfo(false)}
+                      className="inline-flex items-center rounded-md border border-amber-200 bg-white px-2 py-1 text-sm text-stone-600 hover:bg-amber-50"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                  <div className="space-y-3 text-sm text-stone-700">
+                    <p>
+                      <strong>Mood check-in</strong> helps you name how you feel before writing. Research shows that labelling emotions reduces their intensity and improves self-awareness — a practice called <em>affect labelling</em>.
+                    </p>
+                    <p>
+                      <strong>Setting an intention</strong> gives your writing a gentle direction. It is not a strict rule — just a soft focus so the AI reframing can better understand what matters to you right now.
+                    </p>
+                    <p className="text-xs text-stone-500">
+                      Both fields are optional and can be changed at any time before saving.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <Card className="border-amber-200/70 bg-white/80 shadow-none">
               <CardHeader className="pb-3">

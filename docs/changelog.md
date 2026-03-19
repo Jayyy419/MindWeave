@@ -2,6 +2,76 @@
 
 This changelog captures the implementation history from the start of this project session through the most recent deployment.
 
+## 2026-03-20 — Product, UX, and Hosting Overhaul
+
+### Journal UX and Writing Flow
+- Removed draft-saved indicator above the journal title to reduce clutter.
+- Added mood option `Other` and enabled deselect-on-second-click behavior for mood chips.
+- Upgraded intention placeholder copy to professional wording.
+- Added mood context info modal (mini `i` button) explaining purpose of mood and intention fields.
+- Updated check-in summary copy to natural sentence flow:
+	- Example: "I'm feeling hopeful today and want to process my thoughts."
+- Added local subtitle persistence from mood/intention summary and surfaced subtitle in Memory Lane cards.
+- Improved editor textarea behavior so it fills available writing area naturally.
+- Reduced unintended homepage overflow/scroll by adjusting viewport height calculation.
+
+### Settings and Account Management
+- Fixed settings runtime rendering issue caused by empty string select item values by introducing a sentinel select value.
+- Replaced JSON export with fully working PDF export for entries.
+- Removed bottom logout button in settings.
+- Right-aligned `Save Settings` action.
+- Removed user-facing strict journal-only mode setting.
+- Implemented account update workflows in settings:
+	- Username change with live availability checking.
+	- Email change with OTP send + verify before save.
+	- Password change with current/new/repeat fields.
+	- Dynamic password requirement checker added to settings (same pattern as signup).
+
+### Auth and Routing Improvements
+- Redesigned auth page into journal-themed UI aligned with product visual identity.
+- Added registration-time dynamic password checklist (uppercase/lowercase/number/symbol/min length).
+- Added registration-time live username availability checker.
+- Fixed logout URL behavior so users are redirected to `/auth` instead of staying on prior protected path.
+- Introduced explicit auth route handling:
+	- Unauthenticated `/` redirects to `/auth`.
+	- Authenticated `/auth` redirects to app root.
+
+### Memory Lane URL Migration
+- Migrated user-facing history routes from `/history` to `/memory-lane`.
+- Added compatibility redirects from legacy `/history` routes.
+- Updated navigation and page links to use `/memory-lane` and `/memory-lane/:id`.
+
+### Think Tanks Product Controls
+- Redesigned Think Tanks listing UI to match notebook/amber visual language used across Journal, Memory Lane, and Settings.
+- Introduced lock-first discovery model:
+	- Split into accessible groups and locked groups.
+	- Locked groups are clickable but do not reveal exact unlock criteria.
+	- Modal messaging explains criteria is intentionally hidden to discourage behavior engineering.
+
+### Backend API Additions (Auth + User)
+- Added public username availability endpoint in auth routes.
+- Enforced stronger password policy on registration/reset flows (uppercase/lowercase/number/symbol + length).
+- Added user account endpoints:
+	- Check username availability for current user.
+	- Update username.
+	- Send email OTP for email change.
+	- Verify email OTP and update email.
+	- Change password with current password verification.
+
+### Hosting and Deployment Changes
+- Deployed repeated frontend releases to S3 + CloudFront with cache invalidations.
+- Initialized Vercel project and deployed frontend production builds.
+- Assigned custom Vercel alias:
+	- `https://mindweave.vercel.app`
+- Diagnosed and resolved Vercel 401 protection issue by disabling SSO protection via project API settings.
+- Configured Vercel production builds to use HTTPS API base for frontend API calls.
+
+### Backend Deployment Notes
+- Backend code changes were built successfully locally.
+- Elastic Beanstalk deployments repeatedly failed due source bundle/engine deployment issues and rolled back.
+- Added Prisma CLI to backend production dependencies to reduce deployment-time runtime tool mismatch risk.
+- Captured ongoing EB diagnostics as follow-up work.
+
 ## Scope and Notes
 - This document tracks feature-level and infrastructure-level changes.
 - Dates use local session chronology and deployment timestamps.

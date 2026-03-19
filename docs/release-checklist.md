@@ -6,6 +6,7 @@ Use this checklist before every production release.
 - Pull latest branch and confirm intended changes only.
 - Run backend build successfully.
 - Run frontend build successfully.
+- Verify route updates (auth, memory-lane, think tanks) are consistent across nav and page links.
 - Confirm docs updates for any feature or infra changes.
 - Confirm changelog updated.
 
@@ -45,6 +46,12 @@ Use this checklist before every production release.
 - Create CloudFront invalidation path /*.
 - Wait for invalidation completion.
 
+## E2. Vercel Deploy Steps
+- Deploy production build with HTTPS API base.
+- Confirm alias points to latest production deployment (`mindweave.vercel.app`).
+- Verify `mindweave.vercel.app` returns 200.
+- If 401 occurs, verify Vercel project `ssoProtection` is disabled.
+
 ## F. Database Sync
 - If schema changed, run prisma db push or migrate deploy per strategy.
 - Verify expected tables/columns exist.
@@ -52,6 +59,7 @@ Use this checklist before every production release.
 
 ## G. Smoke Tests
 - GET /api/health through CloudFront.
+- Open `https://mindweave.vercel.app` and verify auth page for unauthenticated user.
 - Register and login.
 - Fetch think tanks.
 - Fetch profile and entries.

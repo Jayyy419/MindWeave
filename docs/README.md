@@ -19,6 +19,8 @@ Welcome to the MindWeave documentation. Use the links below to navigate.
 | [Sprint Plan](sprint-plan.md) | Sprint-by-sprint delivery plan with goals, risks, and definition-of-done |
 | [AWS Redeploy (Console)](aws-redeploy-console.md) | End-to-end deployment steps using AWS Console |
 | [AWS Redeploy (CLI)](aws-redeploy-cli.md) | Command-based deployment runbook with verification and rollback |
+| [Vercel Deployment](vercel-deployment.md) | Frontend deployment flow for mindweave.vercel.app, aliasing, protection, env vars |
+| [Developer Workflow](developer-workflow.md) | How to implement, test, commit, push, and deploy changes safely |
 | [Release Checklist](release-checklist.md) | Pre-release and post-release checklist for reliable production deployments |
 
 ---
@@ -30,7 +32,8 @@ Welcome to the MindWeave documentation. Use the links below to navigate.
 - Backend: `http://localhost:3001`
 
 **Production URLs**
-- Frontend: `https://d1n2io4499e5zf.cloudfront.net`
+- Frontend (CloudFront): `https://d1n2io4499e5zf.cloudfront.net`
+- Frontend (Vercel): `https://mindweave.vercel.app`
 - Backend: `http://mindweave-backend-prod.eba-pkhkfih2.ap-southeast-1.elasticbeanstalk.com`
 
 **AWS Resources (ap-southeast-1)**

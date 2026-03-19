@@ -18,6 +18,7 @@ function AppRoutes() {
   if (!isAuthenticated) {
     return (
       <Routes>
+        <Route path="/" element={<Navigate to="/auth" replace />} />
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="*" element={<Navigate to="/auth" replace />} />
@@ -27,6 +28,7 @@ function AppRoutes() {
 
   return (
     <Routes>
+      <Route path="/auth" element={<Navigate to="/" replace />} />
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route element={<Layout />}>
         <Route path="/" element={<HomePage />} />

@@ -31,6 +31,10 @@ export type AuthResponse = {
   };
 };
 
+export interface UsernameAvailabilityResponse {
+  available: boolean;
+}
+
 export async function register(data: {
   email: string;
   username: string;
@@ -44,6 +48,17 @@ export async function register(data: {
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || "Failed to register");
+  }
+  return res.json();
+}
+
+export async function checkUsernameAvailability(username: string): Promise<UsernameAvailabilityResponse> {
+  const res = await fetch(
+    `${API_BASE_URL}/auth/username-available?username=${encodeURIComponent(username.trim())}`
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to check username");
   }
   return res.json();
 }
@@ -127,6 +142,9 @@ export interface ReframePreviewResponse {
 // ── Profile Types ──
 
 export interface UserProfile {
+  id: string;
+  email: string;
+  username: string;
   level: number;
   badges: string[];
   tags: string[];
@@ -246,6 +264,81 @@ export async function deleteEntries(ids: string[]): Promise<{ deletedCount: numb
 export async function getProfile(): Promise<UserProfile> {
   const res = await fetch(`${API_BASE_URL}/user/profile`, { headers: headers() });
   if (!res.ok) throw new Error("Failed to fetch profile");
+  return res.json();
+}
+
+export async function checkUsernameAvailabilityForUser(
+  username: string
+): Promise<UsernameAvailabilityResponse> {
+  const res = await fetch(
+    `${API_BASE_URL}/user/username-available?username=${encodeURIComponent(username.trim())}`,
+    { headers: headers() }
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to check username availability");
+  }
+  return res.json();
+}
+
+export async function updateUsername(
+  username: string
+): Promise<{ message: string; user: { id: string; email: string; username: string } }> {
+  const res = await fetch(`${API_BASE_URL}/user/username`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify({ username }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to update username");
+  }
+  return res.json();
+}
+
+export async function sendEmailChangeOtp(email: string): Promise<{ message: string }> {
+  const res = await fetch(`${API_BASE_URL}/user/email-otp/send`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify({ email }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to send verification code");
+  }
+  return res.json();
+}
+
+export async function verifyEmailChangeOtp(data: {
+  email: string;
+  otp: string;
+}): Promise<{ message: string; user: { id: string; email: string; username: string } }> {
+  const res = await fetch(`${API_BASE_URL}/user/email-otp/verify`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to verify email code");
+  }
+  return res.json();
+}
+
+export async function changePassword(data: {
+  currentPassword: string;
+  newPassword: string;
+  repeatNewPassword: string;
+}): Promise<{ message: string }> {
+  const res = await fetch(`${API_BASE_URL}/user/password`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to change password");
+  }
   return res.json();
 }
 

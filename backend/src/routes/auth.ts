@@ -20,12 +20,19 @@ type AuthBody = {
   token?: string;
 };
 
+const PASSWORD_POLICY_ERROR =
+  "password must be at least 8 characters and include uppercase, lowercase, number, and symbol";
+
 function createToken(userId: string): string {
   return jwt.sign({ userId }, JWT_SECRET, { expiresIn: "7d" });
 }
 
 function hashResetToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
+}
+
+function isStrongPassword(password: string): boolean {
+  return /[A-Z]/.test(password) && /[a-z]/.test(password) && /\d/.test(password) && /[^A-Za-z0-9]/.test(password);
 }
 
 async function sendPasswordResetEmail(email: string, resetUrl: string): Promise<void> {
@@ -76,8 +83,8 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  if (password.length < 8) {
-    res.status(400).json({ error: "password must be at least 8 characters" });
+  if (password.length < 8 || !isStrongPassword(password)) {
+    res.status(400).json({ error: PASSWORD_POLICY_ERROR });
     return;
   }
 
@@ -218,8 +225,8 @@ router.post("/reset-password", async (req: Request, res: Response): Promise<void
     return;
   }
 
-  if (password.length < 8) {
-    res.status(400).json({ error: "password must be at least 8 characters" });
+  if (password.length < 8 || !isStrongPassword(password)) {
+    res.status(400).json({ error: PASSWORD_POLICY_ERROR });
     return;
   }
 
@@ -262,6 +269,31 @@ router.post("/reset-password", async (req: Request, res: Response): Promise<void
   } catch (error) {
     console.error("Reset password error:", error);
     res.status(500).json({ error: "Failed to reset password" });
+  }
+});
+
+router.get("/username-available", async (req: Request, res: Response): Promise<void> => {
+  const rawUsername = String(req.query.username || "").trim();
+
+  if (!rawUsername) {
+    res.status(400).json({ error: "username is required" });
+    return;
+  }
+
+  if (!/^[A-Za-z0-9_.-]{3,24}$/.test(rawUsername)) {
+    res.status(400).json({ error: "username must be 3-24 chars and use letters, numbers, ., _, -" });
+    return;
+  }
+
+  try {
+    const existing = await prisma.user.findFirst({
+      where: { username: rawUsername },
+      select: { id: true },
+    });
+    res.json({ available: !existing });
+  } catch (error) {
+    console.error("Username availability check error:", error);
+    res.status(500).json({ error: "Failed to check username availability" });
   }
 });
 

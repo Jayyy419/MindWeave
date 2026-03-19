@@ -460,7 +460,7 @@ export function HomePage() {
   }
 
   return (
-    <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen min-h-[calc(100vh-4rem)] bg-[repeating-linear-gradient(to_bottom,#fffef9_0px,#fffef9_34px,#ece7dc_35px)] px-4 py-6 sm:px-6 lg:px-8">
+    <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen min-h-[calc(100vh-7rem)] bg-[repeating-linear-gradient(to_bottom,#fffef9_0px,#fffef9_34px,#ece7dc_35px)] px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl space-y-6">
       <section className="rounded-3xl border border-amber-200/70 bg-[linear-gradient(140deg,#fff8ea_0%,#fffdf6_45%,#f6f7ee_100%)] p-6 shadow-[0_24px_60px_-32px_rgba(94,72,36,0.35)] sm:p-8">
         <div className="mb-5 flex flex-col items-center gap-3 text-center">

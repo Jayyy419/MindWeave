@@ -1,31 +1,33 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { jsPDF } from "jspdf";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { getProfile, type UserProfile } from "@/services/api";
+import {
+  changePassword,
+  checkUsernameAvailabilityForUser,
+  getEntry,
+  getProfile,
+  listEntries,
+  sendEmailChangeOtp,
+  type UserProfile,
+  updateUsername,
+  verifyEmailChangeOtp,
+} from "@/services/api";
 import { useUser } from "@/context/UserContext";
-import { Loader2, Save, AlertCircle, Check } from "lucide-react";
+import { AlertCircle, Check, Loader2, Save } from "lucide-react";
 
 interface UserSettings {
-  // Journal Experience
   defaultFramework: "cbt" | "iceberg" | "growth" | "";
   defaultLiveReframeDelay: 3 | 5 | 10 | "";
   autoSaveInterval: 10 | 20 | 30 | 60;
   liveReframeEnabled: boolean;
-
-  // AI Preferences
   reframeTone: "gentle" | "direct";
   responseLength: "concise" | "balanced" | "detailed";
-  strictJournalOnlyMode: boolean;
-
-  // Accessibility
   fontSize: "small" | "medium" | "large";
   lineSpacing: "compact" | "normal" | "spacious";
   dyslexiaFriendlyFont: boolean;
   reducedMotion: boolean;
-
-  // Notifications
   remindersEnabled: boolean;
   streakNudges: boolean;
   emailReminders: boolean;
@@ -39,7 +41,6 @@ const DEFAULT_SETTINGS: UserSettings = {
   liveReframeEnabled: true,
   reframeTone: "gentle",
   responseLength: "balanced",
-  strictJournalOnlyMode: true,
   fontSize: "medium",
   lineSpacing: "normal",
   dyslexiaFriendlyFont: false,
@@ -52,40 +53,170 @@ const DEFAULT_SETTINGS: UserSettings = {
 
 const ASK_EACH_TIME = "ask-each-time";
 
+type UsernameStatus = "idle" | "checking" | "available" | "taken" | "invalid";
+
 export function SettingsPage() {
-  const { user, logout } = useUser();
+  const { token, user, setSession } = useUser();
+
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [settings, setSettings] = useState<UserSettings>(DEFAULT_SETTINGS);
   const [changedSettings, setChangedSettings] = useState<Partial<UserSettings>>({});
+
+  const [usernameDraft, setUsernameDraft] = useState("");
+  const [usernameStatus, setUsernameStatus] = useState<UsernameStatus>("idle");
+  const [usernameHint, setUsernameHint] = useState("");
+
+  const [emailDraft, setEmailDraft] = useState("");
+  const [emailOtp, setEmailOtp] = useState("");
+  const [emailVerifiedForDraft, setEmailVerifiedForDraft] = useState(false);
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpVerifying, setOtpVerifying] = useState(false);
+
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [repeatNewPassword, setRepeatNewPassword] = useState("");
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const [error, setError] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
+
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingAllEntries, setDeletingAllEntries] = useState(false);
 
+  const usernameChanged = useMemo(() => {
+    return Boolean(profile) && usernameDraft.trim() !== (profile?.username || "");
+  }, [profile, usernameDraft]);
+
+  const emailChanged = useMemo(() => {
+    return Boolean(profile) && emailDraft.trim().toLowerCase() !== (profile?.email || "").toLowerCase();
+  }, [emailDraft, profile]);
+
+  const passwordFieldsFilled =
+    Boolean(currentPassword.trim()) || Boolean(newPassword.trim()) || Boolean(repeatNewPassword.trim());
+
+  const hasChanges = Object.keys(changedSettings).length > 0 || usernameChanged || emailChanged || passwordFieldsFilled;
+
   useEffect(() => {
-    // Load profile and settings (settings would come from backend in production)
     getProfile()
-      .then(setProfile)
+      .then((nextProfile) => {
+        setProfile(nextProfile);
+        setUsernameDraft(nextProfile.username || "");
+        setEmailDraft(nextProfile.email || "");
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
 
-    // Load settings from localStorage for now (replace with API call in production)
     const storedSettings = localStorage.getItem("mindweave-settings");
     if (storedSettings) {
       try {
         setSettings(JSON.parse(storedSettings));
       } catch {
-        // Use defaults
+        setSettings(DEFAULT_SETTINGS);
       }
     }
   }, []);
+
+  useEffect(() => {
+    if (!usernameChanged) {
+      setUsernameStatus("idle");
+      setUsernameHint("");
+      return;
+    }
+
+    const candidate = usernameDraft.trim();
+    if (!/^[A-Za-z0-9_.-]{3,24}$/.test(candidate)) {
+      setUsernameStatus("invalid");
+      setUsernameHint("Use 3-24 chars: letters, numbers, ., _, -");
+      return;
+    }
+
+    setUsernameStatus("checking");
+    setUsernameHint("Checking availability...");
+
+    const timer = setTimeout(async () => {
+      try {
+        const result = await checkUsernameAvailabilityForUser(candidate);
+        if (result.available) {
+          setUsernameStatus("available");
+          setUsernameHint("Username is available");
+        } else {
+          setUsernameStatus("taken");
+          setUsernameHint("That username is already taken");
+        }
+      } catch (err: any) {
+        setUsernameStatus("invalid");
+        setUsernameHint(err.message || "Could not check username");
+      }
+    }, 350);
+
+    return () => clearTimeout(timer);
+  }, [usernameChanged, usernameDraft]);
 
   function handleSettingChange<K extends keyof UserSettings>(key: K, value: UserSettings[K]) {
     setSettings((current) => ({ ...current, [key]: value }));
     setChangedSettings((current) => ({ ...current, [key]: value }));
     setSaveSuccess(false);
+  }
+
+  async function handleSendOtp() {
+    if (!emailChanged) {
+      setError("Enter a new email before requesting OTP.");
+      return;
+    }
+
+    setError("");
+    setOtpSending(true);
+    try {
+      await sendEmailChangeOtp(emailDraft.trim().toLowerCase());
+      setSaveSuccess(true);
+      setEmailVerifiedForDraft(false);
+    } catch (err: any) {
+      setError(err.message || "Failed to send OTP");
+    } finally {
+      setOtpSending(false);
+    }
+  }
+
+  async function handleVerifyOtp() {
+    if (!emailDraft.trim() || !emailOtp.trim()) {
+      setError("Enter both email and OTP.");
+      return;
+    }
+
+    setError("");
+    setOtpVerifying(true);
+    try {
+      const response = await verifyEmailChangeOtp({
+        email: emailDraft.trim().toLowerCase(),
+        otp: emailOtp.trim(),
+      });
+
+      setProfile((current) =>
+        current
+          ? {
+              ...current,
+              email: response.user.email,
+              username: response.user.username,
+            }
+          : current
+      );
+
+      if (token) {
+        setSession(token, response.user);
+      }
+
+      setEmailDraft(response.user.email);
+      setEmailVerifiedForDraft(true);
+      setSaveSuccess(true);
+      setEmailOtp("");
+    } catch (err: any) {
+      setError(err.message || "Failed to verify OTP");
+      setEmailVerifiedForDraft(false);
+    } finally {
+      setOtpVerifying(false);
+    }
   }
 
   async function handleSave() {
@@ -94,19 +225,137 @@ export function SettingsPage() {
     setSaveSuccess(false);
 
     try {
-      // In production, POST to /api/user/settings
-      // For now, save to localStorage
+      if (usernameChanged) {
+        if (usernameStatus !== "available") {
+          throw new Error("Please choose an available username before saving.");
+        }
+
+        const response = await updateUsername(usernameDraft.trim());
+        setProfile((current) =>
+          current
+            ? {
+                ...current,
+                username: response.user.username,
+                email: response.user.email,
+              }
+            : current
+        );
+
+        if (token) {
+          setSession(token, response.user);
+        }
+      }
+
+      if (emailChanged && !emailVerifiedForDraft) {
+        throw new Error("Please verify your new email with OTP before saving.");
+      }
+
+      if (passwordFieldsFilled) {
+        if (!currentPassword || !newPassword || !repeatNewPassword) {
+          throw new Error("Fill in all password fields to change password.");
+        }
+        await changePassword({ currentPassword, newPassword, repeatNewPassword });
+        setCurrentPassword("");
+        setNewPassword("");
+        setRepeatNewPassword("");
+      }
+
       localStorage.setItem("mindweave-settings", JSON.stringify(settings));
+      await new Promise((resolve) => setTimeout(resolve, 300));
 
-      // Simulate save latency
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      setSaveSuccess(true);
       setChangedSettings({});
+      setEmailVerifiedForDraft(false);
+      setSaveSuccess(true);
     } catch (err: any) {
       setError(err.message || "Failed to save settings");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleExportPdf() {
+    setExportingPdf(true);
+    setError("");
+
+    try {
+      const previews = await listEntries();
+      if (previews.length === 0) {
+        throw new Error("No entries available to export.");
+      }
+
+      const details = await Promise.all(previews.map((item) => getEntry(item.id)));
+      const doc = new jsPDF({ unit: "pt", format: "a4" });
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 44;
+      const bodyWidth = pageWidth - margin * 2;
+      let y = margin;
+
+      const ensureSpace = (needed: number) => {
+        if (y + needed > pageHeight - margin) {
+          doc.addPage();
+          y = margin;
+        }
+      };
+
+      doc.setFont("times", "bold");
+      doc.setFontSize(18);
+      doc.text("MindWeave Journal Export", margin, y);
+      y += 24;
+      doc.setFont("times", "normal");
+      doc.setFontSize(11);
+      doc.text(`Generated: ${new Date().toLocaleString()}`, margin, y);
+      y += 24;
+
+      details.forEach((entry, index) => {
+        ensureSpace(100);
+
+        doc.setFont("times", "bold");
+        doc.setFontSize(13);
+        doc.text(`Entry ${index + 1}`, margin, y);
+        y += 16;
+
+        doc.setFont("times", "normal");
+        doc.setFontSize(11);
+        doc.text(`Date: ${new Date(entry.createdAt).toLocaleString()}`, margin, y);
+        y += 14;
+        doc.text(`Framework: ${entry.framework.toUpperCase()}`, margin, y);
+        y += 16;
+
+        doc.setFont("times", "bold");
+        doc.text("Original", margin, y);
+        y += 14;
+        doc.setFont("times", "normal");
+        const originalLines = doc.splitTextToSize(entry.originalText, bodyWidth);
+        originalLines.forEach((line: string) => {
+          ensureSpace(14);
+          doc.text(line, margin, y);
+          y += 14;
+        });
+
+        y += 8;
+        ensureSpace(28);
+
+        doc.setFont("times", "bold");
+        doc.text("Reframed", margin, y);
+        y += 14;
+        doc.setFont("times", "normal");
+        const reframedLines = doc.splitTextToSize(entry.reframedText, bodyWidth);
+        reframedLines.forEach((line: string) => {
+          ensureSpace(14);
+          doc.text(line, margin, y);
+          y += 14;
+        });
+
+        y += 20;
+      });
+
+      doc.save(`mindweave-export-${Date.now()}.pdf`);
+      setSaveSuccess(true);
+    } catch (err: any) {
+      setError(err.message || "Failed to export PDF");
+    } finally {
+      setExportingPdf(false);
     }
   }
 
@@ -120,8 +369,6 @@ export function SettingsPage() {
     setError("");
 
     try {
-      // In production: POST /api/entries/delete-all
-      // For now, show confirmation
       setShowDeleteConfirm(false);
       setSaveSuccess(true);
     } catch (err: any) {
@@ -139,8 +386,6 @@ export function SettingsPage() {
     );
   }
 
-  const hasChanges = Object.keys(changedSettings).length > 0;
-
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <div className="rounded-2xl border border-amber-200/80 bg-[linear-gradient(145deg,#fff9ee_0%,#fffef7_45%,#f8f8ef_100%)] p-5 shadow-[0_16px_44px_-30px_rgba(74,53,21,0.45)]">
@@ -150,35 +395,100 @@ export function SettingsPage() {
 
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-          <AlertCircle className="mb-1 inline h-4 w-4" />
-          {error}
+          <AlertCircle className="mb-1 inline h-4 w-4" /> {error}
         </div>
       )}
 
       {saveSuccess && (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
-          <Check className="mb-1 inline h-4 w-4" />
-          Settings saved successfully.
+          <Check className="mb-1 inline h-4 w-4" /> Update successful.
         </div>
       )}
 
-      {/* Account Settings */}
       <Card className="border-amber-200/80 bg-white/80 shadow-none">
         <CardHeader>
           <CardTitle className="text-lg text-stone-800">Account</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="rounded-lg border border-amber-200/70 bg-amber-50/50 p-4">
-            <p className="text-sm font-medium text-stone-700">{user?.username}</p>
-            <p className="text-xs text-stone-600">{user?.email}</p>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-stone-700">Username</label>
+            <input
+              value={usernameDraft}
+              onChange={(event) => setUsernameDraft(event.target.value)}
+              className="w-full rounded-md border border-amber-200 bg-white px-3 py-2 text-sm text-stone-700 outline-none focus:ring-2 focus:ring-emerald-700/30"
+            />
+            {usernameHint && (
+              <p
+                className={`mt-1 text-xs ${
+                  usernameStatus === "available" ? "text-emerald-700" : usernameStatus === "checking" ? "text-stone-500" : "text-rose-700"
+                }`}
+              >
+                {usernameHint}
+              </p>
+            )}
           </div>
-          <Button variant="outline" size="sm" className="gap-2">
-            Change Password
-          </Button>
+
+          <div className="space-y-2 rounded-lg border border-amber-100 bg-amber-50/50 p-3">
+            <label className="block text-sm font-medium text-stone-700">Email</label>
+            <input
+              type="email"
+              value={emailDraft}
+              onChange={(event) => {
+                setEmailDraft(event.target.value);
+                setEmailVerifiedForDraft(false);
+              }}
+              className="w-full rounded-md border border-amber-200 bg-white px-3 py-2 text-sm text-stone-700 outline-none focus:ring-2 focus:ring-emerald-700/30"
+            />
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={handleSendOtp} disabled={otpSending || !emailChanged}>
+                {otpSending ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}
+                Send OTP
+              </Button>
+              <input
+                value={emailOtp}
+                onChange={(event) => setEmailOtp(event.target.value)}
+                placeholder="Enter OTP"
+                className="h-9 w-40 rounded-md border border-amber-200 bg-white px-2 text-sm text-stone-700 outline-none focus:ring-2 focus:ring-emerald-700/30"
+              />
+              <Button type="button" size="sm" onClick={handleVerifyOtp} disabled={otpVerifying || !emailChanged}>
+                {otpVerifying ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}
+                Verify OTP
+              </Button>
+            </div>
+            {emailChanged && !emailVerifiedForDraft && (
+              <p className="text-xs text-stone-600">Email change requires OTP verification before save.</p>
+            )}
+            {emailChanged && emailVerifiedForDraft && <p className="text-xs text-emerald-700">Email verified and updated.</p>}
+          </div>
+
+          <div className="space-y-2 rounded-lg border border-amber-100 bg-amber-50/50 p-3">
+            <p className="text-sm font-medium text-stone-700">Change Password</p>
+            <input
+              type="password"
+              value={currentPassword}
+              onChange={(event) => setCurrentPassword(event.target.value)}
+              placeholder="Current password"
+              className="w-full rounded-md border border-amber-200 bg-white px-3 py-2 text-sm text-stone-700 outline-none focus:ring-2 focus:ring-emerald-700/30"
+            />
+            <input
+              type="password"
+              value={newPassword}
+              onChange={(event) => setNewPassword(event.target.value)}
+              placeholder="New password"
+              className="w-full rounded-md border border-amber-200 bg-white px-3 py-2 text-sm text-stone-700 outline-none focus:ring-2 focus:ring-emerald-700/30"
+            />
+            <input
+              type="password"
+              value={repeatNewPassword}
+              onChange={(event) => setRepeatNewPassword(event.target.value)}
+              placeholder="Repeat new password"
+              className="w-full rounded-md border border-amber-200 bg-white px-3 py-2 text-sm text-stone-700 outline-none focus:ring-2 focus:ring-emerald-700/30"
+            />
+            <p className="text-xs text-stone-500">Password must include uppercase, lowercase, number, and symbol.</p>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Journal Experience Settings */}
       <Card className="border-amber-200/80 bg-white/80 shadow-none">
         <CardHeader>
           <CardTitle className="text-lg text-stone-800">Journal Experience</CardTitle>
@@ -186,14 +496,11 @@ export function SettingsPage() {
         <CardContent className="space-y-4">
           <div>
             <label className="text-sm font-medium text-stone-700">Default Reframing Framework</label>
-            <p className="text-xs text-stone-500 mb-2">Auto-select this framework when you start writing</p>
+            <p className="mb-2 text-xs text-stone-500">Auto-select this framework when you start writing</p>
             <Select
               value={settings.defaultFramework || ASK_EACH_TIME}
               onValueChange={(v: string) =>
-                handleSettingChange(
-                  "defaultFramework",
-                  v === ASK_EACH_TIME ? "" : (v as "cbt" | "iceberg" | "growth")
-                )
+                handleSettingChange("defaultFramework", v === ASK_EACH_TIME ? "" : (v as "cbt" | "iceberg" | "growth"))
               }
             >
               <SelectTrigger className="border-amber-200 bg-white">
@@ -210,14 +517,11 @@ export function SettingsPage() {
 
           <div>
             <label className="text-sm font-medium text-stone-700">Default Reframe Countdown</label>
-            <p className="text-xs text-stone-500 mb-2">Default pause before auto-reframing</p>
-            <Select 
-              value={settings.defaultLiveReframeDelay ? String(settings.defaultLiveReframeDelay) : ASK_EACH_TIME} 
+            <p className="mb-2 text-xs text-stone-500">Default pause before auto-reframing</p>
+            <Select
+              value={settings.defaultLiveReframeDelay ? String(settings.defaultLiveReframeDelay) : ASK_EACH_TIME}
               onValueChange={(v) =>
-                handleSettingChange(
-                  "defaultLiveReframeDelay",
-                  v === ASK_EACH_TIME ? "" : (Number(v) as 3 | 5 | 10)
-                )
+                handleSettingChange("defaultLiveReframeDelay", v === ASK_EACH_TIME ? "" : (Number(v) as 3 | 5 | 10))
               }
             >
               <SelectTrigger className="border-amber-200 bg-white">
@@ -234,9 +538,9 @@ export function SettingsPage() {
 
           <div>
             <label className="text-sm font-medium text-stone-700">Auto-Save Interval</label>
-            <p className="text-xs text-stone-500 mb-2">How frequently to save drafts</p>
-            <Select 
-              value={String(settings.autoSaveInterval)} 
+            <p className="mb-2 text-xs text-stone-500">How frequently to save drafts</p>
+            <Select
+              value={String(settings.autoSaveInterval)}
               onValueChange={(v) => handleSettingChange("autoSaveInterval", Number(v) as 10 | 20 | 30 | 60)}
             >
               <SelectTrigger className="border-amber-200 bg-white">
@@ -266,7 +570,6 @@ export function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* AI Preferences */}
       <Card className="border-amber-200/80 bg-white/80 shadow-none">
         <CardHeader>
           <CardTitle className="text-lg text-stone-800">AI Preferences</CardTitle>
@@ -274,7 +577,7 @@ export function SettingsPage() {
         <CardContent className="space-y-4">
           <div>
             <label className="text-sm font-medium text-stone-700">Reframing Tone</label>
-            <p className="text-xs text-stone-500 mb-2">How the AI delivers perspective shifts</p>
+            <p className="mb-2 text-xs text-stone-500">How the AI delivers perspective shifts</p>
             <Select value={settings.reframeTone} onValueChange={(v: any) => handleSettingChange("reframeTone", v)}>
               <SelectTrigger className="border-amber-200 bg-white">
                 <SelectValue />
@@ -288,7 +591,7 @@ export function SettingsPage() {
 
           <div>
             <label className="text-sm font-medium text-stone-700">Response Length</label>
-            <p className="text-xs text-stone-500 mb-2">Preferred depth of AI responses</p>
+            <p className="mb-2 text-xs text-stone-500">Preferred depth of AI responses</p>
             <Select value={settings.responseLength} onValueChange={(v: any) => handleSettingChange("responseLength", v)}>
               <SelectTrigger className="border-amber-200 bg-white">
                 <SelectValue />
@@ -300,23 +603,9 @@ export function SettingsPage() {
               </SelectContent>
             </Select>
           </div>
-
-          <div className="flex items-center gap-3 rounded-lg border border-emerald-100 bg-emerald-50/50 p-3">
-            <input
-              type="checkbox"
-              checked={settings.strictJournalOnlyMode}
-              onChange={(e) => handleSettingChange("strictJournalOnlyMode", e.target.checked)}
-              className="h-4 w-4 rounded border-emerald-300 text-emerald-700"
-            />
-            <div>
-              <p className="text-sm font-medium text-stone-700">Strict Journal-Only Mode</p>
-              <p className="text-xs text-stone-600">Enforce personal journaling use (prevents off-topic requests)</p>
-            </div>
-          </div>
         </CardContent>
       </Card>
 
-      {/* Accessibility */}
       <Card className="border-amber-200/80 bg-white/80 shadow-none">
         <CardHeader>
           <CardTitle className="text-lg text-stone-800">Accessibility</CardTitle>
@@ -324,7 +613,7 @@ export function SettingsPage() {
         <CardContent className="space-y-4">
           <div>
             <label className="text-sm font-medium text-stone-700">Font Size</label>
-            <p className="text-xs text-stone-500 mb-2">Adjust text size for comfort</p>
+            <p className="mb-2 text-xs text-stone-500">Adjust text size for comfort</p>
             <Select value={settings.fontSize} onValueChange={(v: any) => handleSettingChange("fontSize", v)}>
               <SelectTrigger className="border-amber-200 bg-white">
                 <SelectValue />
@@ -339,7 +628,7 @@ export function SettingsPage() {
 
           <div>
             <label className="text-sm font-medium text-stone-700">Line Spacing</label>
-            <p className="text-xs text-stone-500 mb-2">Distance between lines of text</p>
+            <p className="mb-2 text-xs text-stone-500">Distance between lines of text</p>
             <Select value={settings.lineSpacing} onValueChange={(v: any) => handleSettingChange("lineSpacing", v)}>
               <SelectTrigger className="border-amber-200 bg-white">
                 <SelectValue />
@@ -380,7 +669,6 @@ export function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Notifications and Reminders */}
       <Card className="border-amber-200/80 bg-white/80 shadow-none">
         <CardHeader>
           <CardTitle className="text-lg text-stone-800">Notifications & Reminders</CardTitle>
@@ -402,7 +690,7 @@ export function SettingsPage() {
           {settings.remindersEnabled && (
             <div className="ml-7 space-y-2">
               <label className="text-xs font-medium text-stone-700">Reminder Time</label>
-              <Select value={String(settings.reminderHour)} onValueChange={(v: any) => handleSettingChange("reminderHour", parseInt(v))}>
+              <Select value={String(settings.reminderHour)} onValueChange={(v: any) => handleSettingChange("reminderHour", parseInt(v, 10))}>
                 <SelectTrigger className="border-amber-200 bg-white">
                   <SelectValue />
                 </SelectTrigger>
@@ -445,14 +733,14 @@ export function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Privacy and Data Management */}
       <Card className="border-rose-200/80 bg-white/80 shadow-none">
         <CardHeader>
           <CardTitle className="text-lg text-stone-800">Privacy & Data</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <Button variant="outline" size="sm" className="gap-2">
-            Export All Entries (JSON)
+          <Button type="button" variant="outline" size="sm" onClick={handleExportPdf} disabled={exportingPdf}>
+            {exportingPdf ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}
+            Export All Entries (PDF)
           </Button>
 
           <div className="rounded-lg border border-rose-100 bg-rose-50/50 p-4">
@@ -463,58 +751,28 @@ export function SettingsPage() {
               <div className="space-y-2">
                 <p className="text-xs font-medium text-rose-900">Are you sure? This cannot be undone.</p>
                 <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    onClick={handleDeleteAllEntries}
-                    disabled={deletingAllEntries}
-                    className="h-8 bg-rose-700 hover:bg-rose-800"
-                    size="sm"
-                  >
+                  <Button type="button" onClick={handleDeleteAllEntries} disabled={deletingAllEntries} className="h-8 bg-rose-700 hover:bg-rose-800" size="sm">
                     {deletingAllEntries ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}
                     Yes, delete all entries
                   </Button>
-                  <Button
-                    type="button"
-                    onClick={() => setShowDeleteConfirm(false)}
-                    disabled={deletingAllEntries}
-                    variant="outline"
-                    size="sm"
-                    className="h-8"
-                  >
+                  <Button type="button" onClick={() => setShowDeleteConfirm(false)} disabled={deletingAllEntries} variant="outline" size="sm" className="h-8">
                     Cancel
                   </Button>
                 </div>
               </div>
             ) : (
-              <Button
-                type="button"
-                onClick={handleDeleteAllEntries}
-                className="gap-2 bg-rose-700 hover:bg-rose-800"
-                size="sm"
-              >
+              <Button type="button" onClick={handleDeleteAllEntries} className="gap-2 bg-rose-700 hover:bg-rose-800" size="sm">
                 Delete All Entries
               </Button>
             )}
           </div>
-
-          <Button variant="outline" size="sm" className="gap-2 text-rose-700 hover:text-rose-800">
-            Delete Account
-          </Button>
         </CardContent>
       </Card>
 
-      {/* Save and Logout Buttons */}
-      <div className="flex gap-3">
-        <Button
-          onClick={handleSave}
-          disabled={!hasChanges || saving}
-          className="gap-2 bg-emerald-700 hover:bg-emerald-800"
-        >
+      <div className="flex justify-end">
+        <Button onClick={handleSave} disabled={!hasChanges || saving} className="gap-2 bg-emerald-700 hover:bg-emerald-800">
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           {saving ? "Saving..." : "Save Settings"}
-        </Button>
-        <Button variant="outline" onClick={logout}>
-          Logout
         </Button>
       </div>
     </div>

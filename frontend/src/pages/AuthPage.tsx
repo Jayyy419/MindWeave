@@ -136,9 +136,9 @@ export function AuthPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[linear-gradient(165deg,#f7f1e3_0%,#fcfaf4_42%,#f0ede2_100%)] px-4 py-8">
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[linear-gradient(165deg,#f7f1e3_0%,#fcfaf4_42%,#f0ede2_100%)] px-4 py-6">
       <div className="pointer-events-none absolute inset-0 opacity-60 [background-image:radial-gradient(rgba(148,103,45,0.16)_0.7px,transparent_0.7px)] [background-size:16px_16px]" />
-      <div className="mx-auto grid w-full max-w-6xl gap-6 lg:grid-cols-[1.1fr_1fr]">
+      <div className="mx-auto grid w-full max-w-6xl items-stretch gap-6 lg:grid-cols-[1.1fr_1fr]">
         <Card className="hidden overflow-hidden border-amber-200/80 bg-[repeating-linear-gradient(to_bottom,#fffef9_0px,#fffef9_38px,#ece7dc_39px)] shadow-[0_22px_46px_-28px_rgba(74,53,21,0.45)] lg:block">
           <CardContent className="relative p-8">
             <div className="absolute inset-y-0 left-10 w-px bg-rose-200/80" />

@@ -117,6 +117,13 @@ export interface CreateEntryRequest {
   framework: "cbt" | "iceberg" | "growth";
 }
 
+export interface ReframePreviewResponse {
+  originalText: string;
+  reframedText: string;
+  framework: "cbt" | "iceberg" | "growth";
+  source?: "ai";
+}
+
 // ── Profile Types ──
 
 export interface UserProfile {
@@ -179,6 +186,20 @@ export async function createEntry(data: CreateEntryRequest): Promise<EntryDetail
   return res.json();
 }
 
+/** Generate a live reframing preview without saving an entry */
+export async function previewReframe(data: CreateEntryRequest): Promise<ReframePreviewResponse> {
+  const res = await fetch(`${API_BASE_URL}/entries/reframe-preview`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to generate live preview");
+  }
+  return res.json();
+}
+
 /** List all journal entries for the current user */
 export async function listEntries(): Promise<EntryPreview[]> {
   const res = await fetch(`${API_BASE_URL}/entries`, { headers: headers() });
@@ -192,6 +213,32 @@ export async function getEntry(id: string): Promise<EntryDetail> {
     headers: headers(),
   });
   if (!res.ok) throw new Error("Failed to fetch entry");
+  return res.json();
+}
+
+/** Delete a single journal entry by ID */
+export async function deleteEntry(id: string): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/entries/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    headers: headers(),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to delete entry");
+  }
+}
+
+/** Delete multiple journal entries by IDs */
+export async function deleteEntries(ids: string[]): Promise<{ deletedCount: number }> {
+  const res = await fetch(`${API_BASE_URL}/entries`, {
+    method: "DELETE",
+    headers: headers(),
+    body: JSON.stringify({ ids }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to delete selected entries");
+  }
   return res.json();
 }
 

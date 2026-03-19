@@ -15,6 +15,7 @@ Welcome to the MindWeave documentation. Use the links below to navigate.
 | [AWS Deployment](aws-deployment.md) | Full production deployment runbook — services provisioned, issues resolved, redeploy commands |
 | [Changelog](changelog.md) | Detailed, granular timeline of all major app and infrastructure additions |
 | [Tech Stack](tech-stack.md) | Complete technology inventory, dependency map, env vars, and AWS resource stack |
+| [Hosting and Stack Decisions](hosting-and-stack-decisions.md) | Objective comparison of Amplify vs current hosting and rationale for PostgreSQL, Beanstalk, and CloudFront |
 | [Sprint Plan](sprint-plan.md) | Sprint-by-sprint delivery plan with goals, risks, and definition-of-done |
 | [AWS Redeploy (Console)](aws-redeploy-console.md) | End-to-end deployment steps using AWS Console |
 | [AWS Redeploy (CLI)](aws-redeploy-cli.md) | Command-based deployment runbook with verification and rollback |
@@ -43,7 +44,8 @@ Welcome to the MindWeave documentation. Use the links below to navigate.
 
 1. Start with [Architecture](architecture.md)
 2. Continue to [Tech Stack](tech-stack.md)
-3. Review [API Reference](api-reference.md)
-4. Read [AWS Redeploy (Console)](aws-redeploy-console.md) or [AWS Redeploy (CLI)](aws-redeploy-cli.md)
-5. Use [Release Checklist](release-checklist.md) before every production release
-6. Track delivery history in [Changelog](changelog.md)
+3. Read [Hosting and Stack Decisions](hosting-and-stack-decisions.md)
+4. Review [API Reference](api-reference.md)
+5. Read [AWS Redeploy (Console)](aws-redeploy-console.md) or [AWS Redeploy (CLI)](aws-redeploy-cli.md)
+6. Use [Release Checklist](release-checklist.md) before every production release
+7. Track delivery history in [Changelog](changelog.md)

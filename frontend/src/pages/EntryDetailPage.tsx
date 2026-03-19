@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getEntry, type EntryDetail } from "@/services/api";
-import { ArrowLeft, Loader2, Sparkles } from "lucide-react";
+import { ArrowLeft, CalendarDays, Loader2, Sparkles } from "lucide-react";
 
 const FRAMEWORK_LABELS: Record<string, string> = {
   cbt: "CBT (Cognitive Behavioral Therapy)",
@@ -39,61 +39,60 @@ export function EntryDetailPage() {
       <div className="text-center py-12">
         <p className="text-destructive">{error || "Entry not found"}</p>
         <Link to="/history" className="text-primary underline text-sm mt-2 inline-block">
-          Back to history
+          Back to Memory Lane
         </Link>
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="mx-auto max-w-4xl space-y-6">
       <Link to="/history">
         <Button variant="ghost" size="sm">
           <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to History
+          Back to Memory Lane
         </Button>
       </Link>
 
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">Journal Entry</CardTitle>
+      <Card className="border-amber-200/80 bg-[linear-gradient(145deg,#fff9ee_0%,#fffef7_45%,#f8f8ef_100%)] shadow-[0_20px_55px_-32px_rgba(74,53,21,0.4)]">
+        <CardHeader className="pb-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <CardTitle className="text-xl text-stone-800">Journal Entry</CardTitle>
             <div className="flex items-center gap-2">
-              <Badge variant="outline">
+              <Badge variant="outline" className="border-amber-300 bg-white/70 text-stone-700">
                 {FRAMEWORK_LABELS[entry.framework] || entry.framework}
               </Badge>
             </div>
           </div>
-          <p className="text-xs text-muted-foreground">
+          <div className="inline-flex w-fit items-center gap-2 rounded-full border border-amber-300/70 bg-white/70 px-3 py-1 text-xs text-stone-600">
+            <CalendarDays className="h-3.5 w-3.5 text-amber-700" />
             {new Date(entry.createdAt).toLocaleString()}
-          </p>
+          </div>
         </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Original text */}
-          <div>
-            <h3 className="text-sm font-medium text-muted-foreground mb-2">
+        <CardContent className="space-y-5">
+          <div className="relative rounded-xl border border-amber-100 bg-[repeating-linear-gradient(to_bottom,#fffef9_0px,#fffef9_30px,#ece7dc_31px)] p-4">
+            <div className="pointer-events-none absolute inset-y-0 left-8 w-px bg-rose-200/80" />
+            <h3 className="mb-2 pl-8 text-sm font-medium text-stone-500">
               Original Thought
             </h3>
-            <p className="text-sm leading-relaxed whitespace-pre-wrap">
+            <p className="whitespace-pre-wrap pl-8 pr-2 text-[16px] leading-[31px] text-stone-800" style={{ fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif" }}>
               {entry.originalText}
             </p>
           </div>
 
-          {/* Reframed text */}
-          <div className="border-t pt-4">
-            <h3 className="text-sm font-medium text-purple-700 mb-2 flex items-center gap-1.5">
+          <div className="rounded-xl border border-indigo-200 bg-indigo-50/75 p-4">
+            <h3 className="mb-2 flex items-center gap-1.5 text-sm font-medium text-indigo-700">
               <Sparkles className="h-4 w-4" />
               Reframed Perspective
             </h3>
-            <p className="text-sm leading-relaxed text-purple-900 bg-purple-50 rounded-md p-4 whitespace-pre-wrap">
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-indigo-900">
               {entry.reframedText}
             </p>
           </div>
 
-          {/* Tags */}
           {entry.tags.length > 0 && (
-            <div className="border-t pt-4">
-              <h3 className="text-sm font-medium text-muted-foreground mb-2">
+            <div className="rounded-xl border border-amber-200/70 bg-white/70 p-4">
+              <h3 className="mb-2 text-sm font-medium text-stone-500">
                 Topics
               </h3>
               <div className="flex flex-wrap gap-1.5">

@@ -2,12 +2,69 @@ import { Router, Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import { reframeText, extractTags } from "../services/gemini";
 import { updateUserGamification } from "../services/gamification";
+import { VALID_FRAMEWORK_IDS } from "../config/frameworks";
 
 const router = Router();
 const prisma = new PrismaClient();
+const MAX_ENTRY_WORDS = 100;
 
-// Valid frameworks the user can select
-const VALID_FRAMEWORKS = ["cbt", "iceberg", "growth"];
+const OFF_TOPIC_ERROR =
+  "MindWeave is a personal journaling tool. Please write about your own thoughts, feelings, and experiences.";
+
+function countWords(value: string): number {
+  const trimmed = value.trim();
+  if (!trimmed) return 0;
+  return trimmed.split(/\s+/).length;
+}
+
+/**
+ * POST /api/entries/reframe-preview
+ * Generate a live reframing preview without saving to database.
+ *
+ * Body: { text: string, framework: "cbt" | "iceberg" | "growth" }
+ */
+router.post("/reframe-preview", async (req: Request, res: Response): Promise<void> => {
+  const { text, framework } = req.body;
+
+  if (!text || typeof text !== "string" || text.trim().length === 0) {
+    res.status(400).json({ error: "text is required and must be a non-empty string" });
+    return;
+  }
+
+  if (!framework || !VALID_FRAMEWORK_IDS.includes(framework)) {
+    res.status(400).json({
+      error: `framework must be one of: ${VALID_FRAMEWORK_IDS.join(", ")}`,
+    });
+    return;
+  }
+
+  if (text.length > 5000) {
+    res.status(400).json({ error: "text must be 5000 characters or fewer" });
+    return;
+  }
+
+  if (countWords(text) > MAX_ENTRY_WORDS) {
+    res.status(400).json({ error: `text must be ${MAX_ENTRY_WORDS} words or fewer` });
+    return;
+  }
+
+  try {
+    const reframedText = await reframeText(text.trim(), framework, { allowFallback: false });
+    res.json({
+      originalText: text.trim(),
+      reframedText,
+      framework,
+      source: "ai",
+    });
+  } catch (error) {
+    if (error instanceof Error && error.message === "NOT_JOURNAL_ENTRY") {
+      res.status(422).json({ error: OFF_TOPIC_ERROR });
+      return;
+    }
+    console.error("Error generating reframe preview:", error);
+    res.status(503).json({ error: "Live AI reframing is temporarily unavailable" });
+  }
+});
 
 /**
  * POST /api/entries
@@ -26,9 +83,9 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
-  if (!framework || !VALID_FRAMEWORKS.includes(framework)) {
+  if (!framework || !VALID_FRAMEWORK_IDS.includes(framework)) {
     res.status(400).json({
-      error: `framework must be one of: ${VALID_FRAMEWORKS.join(", ")}`,
+      error: `framework must be one of: ${VALID_FRAMEWORK_IDS.join(", ")}`,
     });
     return;
   }
@@ -39,8 +96,14 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
+  if (countWords(text) > MAX_ENTRY_WORDS) {
+    res.status(400).json({ error: `text must be ${MAX_ENTRY_WORDS} words or fewer` });
+    return;
+  }
+
   try {
-    // Call Gemini API for reframing and tag extraction in parallel
+    // Validate journal intent first, then extract tags in parallel.
+    // reframeText throws NOT_JOURNAL_ENTRY if the content is off-topic.
     const [reframedText, tags] = await Promise.all([
       reframeText(text.trim(), framework),
       extractTags(text.trim()),
@@ -69,6 +132,10 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
       createdAt: entry.createdAt,
     });
   } catch (error) {
+    if (error instanceof Error && error.message === "NOT_JOURNAL_ENTRY") {
+      res.status(422).json({ error: OFF_TOPIC_ERROR });
+      return;
+    }
     console.error("Error creating entry:", error);
     res.status(500).json({ error: "Failed to create entry. Please try again." });
   }
@@ -141,6 +208,69 @@ router.get("/:id", async (req: Request, res: Response): Promise<void> => {
   } catch (error) {
     console.error("Error fetching entry:", error);
     res.status(500).json({ error: "Failed to fetch entry" });
+  }
+});
+
+/**
+ * DELETE /api/entries
+ * Delete multiple entries owned by the current user.
+ * Body: { ids: string[] }
+ */
+router.delete("/", async (req: Request, res: Response): Promise<void> => {
+  const userId = (req as any).userId as string;
+  const { ids } = req.body as { ids?: unknown };
+
+  if (!Array.isArray(ids) || ids.length === 0) {
+    res.status(400).json({ error: "ids must be a non-empty array" });
+    return;
+  }
+
+  const sanitizedIds = ids
+    .filter((id): id is string => typeof id === "string" && id.trim().length > 0)
+    .map((id) => id.trim());
+
+  if (sanitizedIds.length === 0) {
+    res.status(400).json({ error: "ids must contain valid entry IDs" });
+    return;
+  }
+
+  try {
+    const result = await prisma.entry.deleteMany({
+      where: {
+        userId,
+        id: { in: sanitizedIds },
+      },
+    });
+
+    res.json({ deletedCount: result.count });
+  } catch (error) {
+    console.error("Error deleting multiple entries:", error);
+    res.status(500).json({ error: "Failed to delete selected entries" });
+  }
+});
+
+/**
+ * DELETE /api/entries/:id
+ * Delete one entry owned by the current user.
+ */
+router.delete("/:id", async (req: Request, res: Response): Promise<void> => {
+  const userId = (req as any).userId as string;
+  const id = req.params.id as string;
+
+  try {
+    const deleted = await prisma.entry.deleteMany({
+      where: { id, userId },
+    });
+
+    if (deleted.count === 0) {
+      res.status(404).json({ error: "Entry not found" });
+      return;
+    }
+
+    res.status(204).send();
+  } catch (error) {
+    console.error("Error deleting entry:", error);
+    res.status(500).json({ error: "Failed to delete entry" });
   }
 });
 

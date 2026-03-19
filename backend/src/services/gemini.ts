@@ -1,21 +1,14 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import dotenv from "dotenv";
+import { FRAMEWORK_PROMPT_MAP, FRAMEWORK_FALLBACK_MAP } from "../config/frameworks";
 
 dotenv.config();
 
 const geminiApiKey = process.env.GEMINI_API_KEY || "";
+const geminiModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
 // Initialize the Gemini client when a key is present.
 const genAI = geminiApiKey ? new GoogleGenerativeAI(geminiApiKey) : null;
-
-// Framework-specific system prompts for thought reframing
-const FRAMEWORK_PROMPTS: Record<string, string> = {
-  cbt: `You are a cognitive behavioral therapist. Reframe the following thought by identifying cognitive distortions and offering a balanced perspective. Keep it concise and empathetic. Return only the reframed text without any additional commentary, labels, or prefixes.`,
-
-  iceberg: `You are a therapist using the Iceberg Model. The iceberg's tip is the surface reaction; below the surface are deeper feelings and needs. Reframe the following by exploring what might be underneath the surface-level thought. Keep it concise and empathetic. Return only the reframed text without any additional commentary, labels, or prefixes.`,
-
-  growth: `You are a coach promoting a growth mindset. Reframe the following by focusing on learning, effort, and potential rather than fixed outcomes. Keep it concise and empathetic. Return only the reframed text without any additional commentary, labels, or prefixes.`,
-};
 
 const STOP_WORDS = new Set([
   "a",
@@ -58,23 +51,7 @@ const STOP_WORDS = new Set([
   "your",
 ]);
 
-function buildFallbackReframe(text: string, framework: string): string {
-  const normalizedText = text.trim();
 
-  if (framework === "cbt") {
-    return `This situation feels difficult right now, but one moment does not define everything. A more balanced view is that this challenge is real, and I can respond to it one step at a time with more clarity and self-compassion.`;
-  }
-
-  if (framework === "iceberg") {
-    return `What shows on the surface may be frustration, worry, or tension, while underneath there may be needs for reassurance, rest, understanding, or control. Noticing those deeper needs can help me respond to myself with more care.`;
-  }
-
-  if (framework === "growth") {
-    return `This does not have to be a final verdict on my ability. I can treat it as a learning moment, notice what it is teaching me, and keep improving through effort, reflection, and practice.`;
-  }
-
-  return normalizedText;
-}
 
 function buildFallbackTags(text: string): string[] {
   const words = text
@@ -94,38 +71,55 @@ function buildFallbackTags(text: string): string[] {
     .map(([word]) => word);
 }
 
-function getModel() {
+/**
+ * Reframe a user's journal entry text using the specified therapeutic framework.
+ * Calls Google Gemini to generate the reframed version.
+ *
+ * Throws Error("NOT_JOURNAL_ENTRY") when the model determines the text is not
+ * a genuine personal journal entry (off-topic / abuse attempt). This error is
+ * never swallowed by the fallback path — it must propagate to the route handler.
+ */
+export async function reframeText(
+  text: string,
+  framework: string,
+  options?: { allowFallback?: boolean }
+): Promise<string> {
+  const allowFallback = options?.allowFallback ?? true;
+  const systemPrompt = FRAMEWORK_PROMPT_MAP[framework];
+  if (!systemPrompt) {
+    throw new Error(`Unknown framework: ${framework}`);
+  }
   if (!genAI) {
     throw new Error("Gemini API key is missing");
   }
 
-  return genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-}
-
-/**
- * Reframe a user's journal entry text using the specified therapeutic framework.
- * Calls Google Gemini to generate the reframed version.
- */
-export async function reframeText(
-  text: string,
-  framework: string
-): Promise<string> {
-  const systemPrompt = FRAMEWORK_PROMPTS[framework];
-  if (!systemPrompt) {
-    throw new Error(`Unknown framework: ${framework}`);
-  }
-
   try {
-    const model = getModel();
-    const prompt = `${systemPrompt}\n\nOriginal thought:\n"${text}"`;
-    const result = await model.generateContent(prompt);
-    const response = result.response;
-    const reframedText = response.text().trim();
+    // Pass the system prompt as a proper systemInstruction (kept separate from
+    // the user-supplied text) to reduce the risk of prompt injection.
+    const model = genAI.getGenerativeModel({
+      model: geminiModel,
+      systemInstruction: systemPrompt,
+    });
+    const result = await model.generateContent(`Journal reflection:\n"${text}"`);
+    const reframedText = result.response.text().trim();
 
-    return reframedText || buildFallbackReframe(text, framework);
+    // The scope-guard in every system prompt instructs the model to respond
+    // with [NOT_JOURNAL] when it detects an off-topic request.
+    if (reframedText.startsWith("[NOT_JOURNAL]")) {
+      throw new Error("NOT_JOURNAL_ENTRY");
+    }
+
+    return reframedText || (FRAMEWORK_FALLBACK_MAP[framework] ?? text);
   } catch (error) {
+    // Content rejection — must propagate, not be silently swapped for a fallback.
+    if (error instanceof Error && error.message === "NOT_JOURNAL_ENTRY") {
+      throw error;
+    }
+    if (!allowFallback) {
+      throw new Error("AI reframing unavailable right now");
+    }
     console.warn("Gemini reframing failed, using fallback response:", error);
-    return buildFallbackReframe(text, framework);
+    return FRAMEWORK_FALLBACK_MAP[framework] ?? text;
   }
 }
 
@@ -135,9 +129,13 @@ export async function reframeText(
  */
 export async function extractTags(text: string): Promise<string[]> {
   try {
-    const model = getModel();
-    const prompt = `Extract 3-5 keywords or short phrases (1-2 words each) that represent the main topics, emotions, or interests in this text. Return ONLY a comma-separated list with no numbering, bullet points, or extra text.\n\nText:\n"${text}"`;
-    const result = await model.generateContent(prompt);
+    if (!genAI) throw new Error("Gemini API key is missing");
+    const model = genAI.getGenerativeModel({
+      model: geminiModel,
+      systemInstruction:
+        "You are a keyword extractor for a personal journaling app. Extract 3-5 keywords or short phrases (1-2 words each) representing the main topics, emotions, or themes. Return ONLY a comma-separated list with no numbering, bullet points, or extra text.",
+    });
+    const result = await model.generateContent(`Extract keywords from this journal text:\n"${text}"`);
     const response = result.response;
     const rawTags = response.text().trim();
 
@@ -164,7 +162,8 @@ export async function generateChatBotReply(
   const fallback = `Thanks for sharing, ${username}. In ${thinkTankName}, a helpful next step is to break this into one small action and ask the group for focused feedback.`;
 
   try {
-    const model = getModel();
+    if (!genAI) throw new Error("Gemini API key is missing");
+    const model = genAI.getGenerativeModel({ model: geminiModel });
     const prompt = `You are MindWeave Bot, a warm and practical facilitator in a group called "${thinkTankName}".
 Respond to this user message in 2-4 concise sentences:
 

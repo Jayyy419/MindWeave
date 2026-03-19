@@ -38,7 +38,7 @@ export function EntryDetailPage() {
     return (
       <div className="text-center py-12">
         <p className="text-destructive">{error || "Entry not found"}</p>
-        <Link to="/history" className="text-primary underline text-sm mt-2 inline-block">
+        <Link to="/memory-lane" className="text-primary underline text-sm mt-2 inline-block">
           Back to Memory Lane
         </Link>
       </div>
@@ -47,7 +47,7 @@ export function EntryDetailPage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <Link to="/history">
+      <Link to="/memory-lane">
         <Button variant="ghost" size="sm">
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back to Memory Lane

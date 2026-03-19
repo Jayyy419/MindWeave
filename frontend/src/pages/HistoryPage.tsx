@@ -222,7 +222,7 @@ export function HistoryPage() {
                     </span>
                     <div className="flex items-center gap-2">
                       <Link
-                        to={`/history/${entry.id}`}
+                        to={`/memory-lane/${entry.id}`}
                         className="rounded-md border border-amber-300 bg-white px-2.5 py-1 text-xs text-stone-700 hover:bg-amber-50"
                       >
                         Open

@@ -15,7 +15,7 @@ import {
   verifyEmailChangeOtp,
 } from "@/services/api";
 import { useUser } from "@/context/UserContext";
-import { AlertCircle, Check, Loader2, Save } from "lucide-react";
+import { AlertCircle, Check, CheckCircle2, Loader2, Save, XCircle } from "lucide-react";
 
 interface UserSettings {
   defaultFramework: "cbt" | "iceberg" | "growth" | "";
@@ -95,6 +95,18 @@ export function SettingsPage() {
 
   const passwordFieldsFilled =
     Boolean(currentPassword.trim()) || Boolean(newPassword.trim()) || Boolean(repeatNewPassword.trim());
+
+  const newPasswordChecks = useMemo(
+    () => ({
+      minLength: newPassword.length >= 8,
+      uppercase: /[A-Z]/.test(newPassword),
+      lowercase: /[a-z]/.test(newPassword),
+      number: /\d/.test(newPassword),
+      symbol: /[^A-Za-z0-9]/.test(newPassword),
+      repeatMatches: repeatNewPassword.length > 0 && repeatNewPassword === newPassword,
+    }),
+    [newPassword, repeatNewPassword]
+  );
 
   const hasChanges = Object.keys(changedSettings).length > 0 || usernameChanged || emailChanged || passwordFieldsFilled;
 
@@ -484,7 +496,35 @@ export function SettingsPage() {
               placeholder="Repeat new password"
               className="w-full rounded-md border border-amber-200 bg-white px-3 py-2 text-sm text-stone-700 outline-none focus:ring-2 focus:ring-emerald-700/30"
             />
-            <p className="text-xs text-stone-500">Password must include uppercase, lowercase, number, and symbol.</p>
+            <div className="rounded-lg border border-amber-200 bg-white/70 p-3 text-xs text-stone-700">
+              <p className="mb-2 font-medium text-stone-800">Password requirements</p>
+              <ul className="space-y-1">
+                <li className="flex items-center gap-1.5">
+                  {newPasswordChecks.minLength ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700" /> : <XCircle className="h-3.5 w-3.5 text-rose-700" />}
+                  At least 8 characters
+                </li>
+                <li className="flex items-center gap-1.5">
+                  {newPasswordChecks.uppercase ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700" /> : <XCircle className="h-3.5 w-3.5 text-rose-700" />}
+                  One uppercase letter
+                </li>
+                <li className="flex items-center gap-1.5">
+                  {newPasswordChecks.lowercase ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700" /> : <XCircle className="h-3.5 w-3.5 text-rose-700" />}
+                  One lowercase letter
+                </li>
+                <li className="flex items-center gap-1.5">
+                  {newPasswordChecks.number ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700" /> : <XCircle className="h-3.5 w-3.5 text-rose-700" />}
+                  One number
+                </li>
+                <li className="flex items-center gap-1.5">
+                  {newPasswordChecks.symbol ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700" /> : <XCircle className="h-3.5 w-3.5 text-rose-700" />}
+                  One symbol
+                </li>
+                <li className="flex items-center gap-1.5">
+                  {newPasswordChecks.repeatMatches ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-700" /> : <XCircle className="h-3.5 w-3.5 text-rose-700" />}
+                  New password fields match
+                </li>
+              </ul>
+            </div>
           </div>
         </CardContent>
       </Card>

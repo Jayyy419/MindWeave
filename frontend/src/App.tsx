@@ -18,8 +18,9 @@ function AppRoutes() {
   if (!isAuthenticated) {
     return (
       <Routes>
+        <Route path="/auth" element={<AuthPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="*" element={<AuthPage />} />
+        <Route path="*" element={<Navigate to="/auth" replace />} />
       </Routes>
     );
   }
@@ -29,8 +30,10 @@ function AppRoutes() {
       <Route path="/reset-password" element={<ResetPasswordPage />} />
       <Route element={<Layout />}>
         <Route path="/" element={<HomePage />} />
-        <Route path="/history" element={<HistoryPage />} />
-        <Route path="/history/:id" element={<EntryDetailPage />} />
+        <Route path="/memory-lane" element={<HistoryPage />} />
+        <Route path="/memory-lane/:id" element={<EntryDetailPage />} />
+        <Route path="/history" element={<Navigate to="/memory-lane" replace />} />
+        <Route path="/history/:id" element={<Navigate to="/memory-lane" replace />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/thinktanks" element={<ThinkTanksPage />} />

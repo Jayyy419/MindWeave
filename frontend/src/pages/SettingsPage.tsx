@@ -50,6 +50,8 @@ const DEFAULT_SETTINGS: UserSettings = {
   reminderHour: 9,
 };
 
+const ASK_EACH_TIME = "ask-each-time";
+
 export function SettingsPage() {
   const { user, logout } = useUser();
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -185,12 +187,20 @@ export function SettingsPage() {
           <div>
             <label className="text-sm font-medium text-stone-700">Default Reframing Framework</label>
             <p className="text-xs text-stone-500 mb-2">Auto-select this framework when you start writing</p>
-            <Select value={settings.defaultFramework} onValueChange={(v: any) => handleSettingChange("defaultFramework", v)}>
+            <Select
+              value={settings.defaultFramework || ASK_EACH_TIME}
+              onValueChange={(v: string) =>
+                handleSettingChange(
+                  "defaultFramework",
+                  v === ASK_EACH_TIME ? "" : (v as "cbt" | "iceberg" | "growth")
+                )
+              }
+            >
               <SelectTrigger className="border-amber-200 bg-white">
                 <SelectValue placeholder="Use prompt each time" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Ask me each time</SelectItem>
+                <SelectItem value={ASK_EACH_TIME}>Ask me each time</SelectItem>
                 <SelectItem value="cbt">CBT (Cognitive Behavioral Therapy)</SelectItem>
                 <SelectItem value="iceberg">Iceberg Model</SelectItem>
                 <SelectItem value="growth">Growth Mindset</SelectItem>
@@ -202,14 +212,19 @@ export function SettingsPage() {
             <label className="text-sm font-medium text-stone-700">Default Reframe Countdown</label>
             <p className="text-xs text-stone-500 mb-2">Default pause before auto-reframing</p>
             <Select 
-              value={settings.defaultLiveReframeDelay ? String(settings.defaultLiveReframeDelay) : ""} 
-              onValueChange={(v) => handleSettingChange("defaultLiveReframeDelay", v ? (Number(v) as 3 | 5 | 10) : "")}
+              value={settings.defaultLiveReframeDelay ? String(settings.defaultLiveReframeDelay) : ASK_EACH_TIME} 
+              onValueChange={(v) =>
+                handleSettingChange(
+                  "defaultLiveReframeDelay",
+                  v === ASK_EACH_TIME ? "" : (Number(v) as 3 | 5 | 10)
+                )
+              }
             >
               <SelectTrigger className="border-amber-200 bg-white">
                 <SelectValue placeholder="Ask me each time" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Ask me each time</SelectItem>
+                <SelectItem value={ASK_EACH_TIME}>Ask me each time</SelectItem>
                 <SelectItem value="3">3 seconds</SelectItem>
                 <SelectItem value="5">5 seconds</SelectItem>
                 <SelectItem value="10">10 seconds</SelectItem>

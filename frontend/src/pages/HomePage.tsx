@@ -151,6 +151,27 @@ export function HomePage() {
     []
   );
 
+  const selectedMoodLabel = useMemo(
+    () => MOODS.find((option) => option.value === mood)?.label.toLowerCase() ?? "",
+    [mood]
+  );
+  const normalizedIntention = useMemo(
+    () => intention.trim().replace(/^to\s+/i, "").trim(),
+    [intention]
+  );
+  const checkInSummary = useMemo(() => {
+    if (selectedMoodLabel && normalizedIntention) {
+      return `I'm feeling ${selectedMoodLabel} today and want to ${normalizedIntention}.`;
+    }
+    if (selectedMoodLabel) {
+      return `I'm feeling ${selectedMoodLabel} today.`;
+    }
+    if (normalizedIntention) {
+      return `Today I want to ${normalizedIntention}.`;
+    }
+    return "";
+  }, [selectedMoodLabel, normalizedIntention]);
+
   useEffect(() => {
     const rawDraft = localStorage.getItem(DRAFT_KEY);
     if (!rawDraft) return;
@@ -712,11 +733,10 @@ export function HomePage() {
                   />
                 </div>
 
-                {(mood || intention) && (
+                {checkInSummary && (
                   <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-2 text-xs text-emerald-800">
                     <Heart className="mr-1 inline h-3.5 w-3.5" />
-                    Today: {mood || "unspecified mood"}
-                    {intention ? `, intention is ${intention}.` : "."}
+                    {checkInSummary}
                   </div>
                 )}
               </CardContent>

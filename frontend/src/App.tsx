@@ -6,6 +6,7 @@ import { HomePage } from "@/pages/HomePage";
 import { HistoryPage } from "@/pages/HistoryPage";
 import { EntryDetailPage } from "@/pages/EntryDetailPage";
 import { ProfilePage } from "@/pages/ProfilePage";
+import { SettingsPage } from "@/pages/SettingsPage";
 import { ThinkTanksPage } from "@/pages/ThinkTanksPage";
 import { ThinkTankDetailPage } from "@/pages/ThinkTankDetailPage";
 import { AuthPage } from "@/pages/AuthPage";
@@ -31,6 +32,7 @@ function AppRoutes() {
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/history/:id" element={<EntryDetailPage />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/settings" element={<SettingsPage />} />
         <Route path="/thinktanks" element={<ThinkTanksPage />} />
         <Route path="/thinktanks/:id" element={<ThinkTankDetailPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

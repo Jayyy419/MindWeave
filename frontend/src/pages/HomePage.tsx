@@ -68,6 +68,7 @@ const REFLECTION_PROMPTS = [
 ];
 
 const DRAFT_KEY = "mindweave-journal-draft";
+const ENTRY_SUBTITLES_KEY = "mindweave-entry-subtitles";
 const MAX_ENTRY_WORDS = 100;
 
 type FrameworkValue = "cbt" | "iceberg" | "growth" | "";
@@ -432,7 +433,13 @@ export function HomePage() {
 
     setLoading(true);
     try {
-      await createEntry({ text: fullJournalUserText.trim(), framework });
+      const createdEntry = await createEntry({ text: fullJournalUserText.trim(), framework });
+      if (checkInSummary) {
+        const raw = localStorage.getItem(ENTRY_SUBTITLES_KEY);
+        const existing = raw ? (JSON.parse(raw) as Record<string, string>) : {};
+        existing[createdEntry.id] = checkInSummary;
+        localStorage.setItem(ENTRY_SUBTITLES_KEY, JSON.stringify(existing));
+      }
       setTitle("");
       setChunks([]);
       setText("");

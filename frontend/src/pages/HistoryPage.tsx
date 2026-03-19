@@ -11,6 +11,8 @@ const FRAMEWORK_LABELS: Record<string, string> = {
   growth: "Growth Mindset",
 };
 
+const ENTRY_SUBTITLES_KEY = "mindweave-entry-subtitles";
+
 export function HistoryPage() {
   const [entries, setEntries] = useState<EntryPreview[]>([]);
   const [loading, setLoading] = useState(true);
@@ -19,6 +21,7 @@ export function HistoryPage() {
   const [notice, setNotice] = useState("");
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [entrySubtitles, setEntrySubtitles] = useState<Record<string, string>>({});
 
   async function loadEntries() {
     setLoading(true);
@@ -35,6 +38,13 @@ export function HistoryPage() {
 
   useEffect(() => {
     loadEntries();
+    const raw = localStorage.getItem(ENTRY_SUBTITLES_KEY);
+    if (!raw) return;
+    try {
+      setEntrySubtitles(JSON.parse(raw) as Record<string, string>);
+    } catch {
+      setEntrySubtitles({});
+    }
   }, []);
 
   function toggleSelected(id: string) {
@@ -62,6 +72,12 @@ export function HistoryPage() {
       await deleteEntry(id);
       setEntries((current) => current.filter((entry) => entry.id !== id));
       setSelectedIds((current) => current.filter((entryId) => entryId !== id));
+      setEntrySubtitles((current) => {
+        const next = { ...current };
+        delete next[id];
+        localStorage.setItem(ENTRY_SUBTITLES_KEY, JSON.stringify(next));
+        return next;
+      });
       setNotice("Entry deleted.");
     } catch (err: any) {
       setError(err.message || "Failed to delete entry");
@@ -82,6 +98,14 @@ export function HistoryPage() {
     try {
       const result = await deleteEntries(selectedIds);
       setEntries((current) => current.filter((entry) => !selectedIds.includes(entry.id)));
+      setEntrySubtitles((current) => {
+        const next = { ...current };
+        selectedIds.forEach((id) => {
+          delete next[id];
+        });
+        localStorage.setItem(ENTRY_SUBTITLES_KEY, JSON.stringify(next));
+        return next;
+      });
       setSelectedIds([]);
       setNotice(`${result.deletedCount} entr${result.deletedCount === 1 ? "y" : "ies"} deleted.`);
     } catch (err: any) {
@@ -178,6 +202,11 @@ export function HistoryPage() {
                     />
                     <div className="min-w-0 flex-1">
                       <p className="text-xs uppercase tracking-[0.14em] text-amber-700/75">Journal note</p>
+                      {entrySubtitles[entry.id] && (
+                        <p className="mt-1 text-xs font-medium italic text-stone-600">
+                          {entrySubtitles[entry.id]}
+                        </p>
+                      )}
                       <p className="mt-1 text-sm leading-7 text-stone-700">{entry.preview}</p>
                     </div>
                   </div>

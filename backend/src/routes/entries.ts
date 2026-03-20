@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import { reframeText, extractTags } from "../services/gemini";
 import { updateUserGamification } from "../services/gamification";
-import { VALID_FRAMEWORK_IDS } from "../config/frameworks";
+import { VALID_FRAMEWORK_IDS, CULTURAL_FRAMEWORK_IDS } from "../config/frameworks";
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -10,6 +10,16 @@ const MAX_ENTRY_WORDS = 100;
 
 const OFF_TOPIC_ERROR =
   "MindWeave is a personal journaling tool. Please write about your own thoughts, feelings, and experiences.";
+const VALID_CULTURAL_TONE_STRENGTHS = ["light", "medium", "strong"] as const;
+
+type CulturalToneStrength = (typeof VALID_CULTURAL_TONE_STRENGTHS)[number];
+
+function parseCulturalToneStrength(value: unknown): CulturalToneStrength | undefined {
+  if (typeof value !== "string") return undefined;
+  return (VALID_CULTURAL_TONE_STRENGTHS as readonly string[]).includes(value)
+    ? (value as CulturalToneStrength)
+    : undefined;
+}
 
 function countWords(value: string): number {
   const trimmed = value.trim();
@@ -24,7 +34,7 @@ function countWords(value: string): number {
  * Body: { text: string, framework: "cbt" | "iceberg" | "growth" }
  */
 router.post("/reframe-preview", async (req: Request, res: Response): Promise<void> => {
-  const { text, framework } = req.body;
+  const { text, framework, culturalToneStrength } = req.body;
 
   if (!text || typeof text !== "string" || text.trim().length === 0) {
     res.status(400).json({ error: "text is required and must be a non-empty string" });
@@ -34,6 +44,22 @@ router.post("/reframe-preview", async (req: Request, res: Response): Promise<voi
   if (!framework || !VALID_FRAMEWORK_IDS.includes(framework)) {
     res.status(400).json({
       error: `framework must be one of: ${VALID_FRAMEWORK_IDS.join(", ")}`,
+    });
+    return;
+  }
+
+  const parsedToneStrength = parseCulturalToneStrength(culturalToneStrength);
+  if (culturalToneStrength !== undefined && !parsedToneStrength) {
+    res.status(400).json({
+      error: `culturalToneStrength must be one of: ${VALID_CULTURAL_TONE_STRENGTHS.join(", ")}`,
+    });
+    return;
+  }
+
+  const isCulturalFramework = (CULTURAL_FRAMEWORK_IDS as readonly string[]).includes(framework);
+  if (!isCulturalFramework && parsedToneStrength) {
+    res.status(400).json({
+      error: "culturalToneStrength can only be used with cultural frameworks",
     });
     return;
   }
@@ -49,7 +75,10 @@ router.post("/reframe-preview", async (req: Request, res: Response): Promise<voi
   }
 
   try {
-    const reframedText = await reframeText(text.trim(), framework, { allowFallback: false });
+    const reframedText = await reframeText(text.trim(), framework, {
+      allowFallback: false,
+      culturalToneStrength: parsedToneStrength,
+    });
     res.json({
       originalText: text.trim(),
       reframedText,
@@ -75,7 +104,7 @@ router.post("/reframe-preview", async (req: Request, res: Response): Promise<voi
  */
 router.post("/", async (req: Request, res: Response): Promise<void> => {
   const userId = (req as any).userId as string;
-  const { text, framework } = req.body;
+  const { text, framework, culturalToneStrength } = req.body;
 
   // Validate input
   if (!text || typeof text !== "string" || text.trim().length === 0) {
@@ -86,6 +115,22 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
   if (!framework || !VALID_FRAMEWORK_IDS.includes(framework)) {
     res.status(400).json({
       error: `framework must be one of: ${VALID_FRAMEWORK_IDS.join(", ")}`,
+    });
+    return;
+  }
+
+  const parsedToneStrength = parseCulturalToneStrength(culturalToneStrength);
+  if (culturalToneStrength !== undefined && !parsedToneStrength) {
+    res.status(400).json({
+      error: `culturalToneStrength must be one of: ${VALID_CULTURAL_TONE_STRENGTHS.join(", ")}`,
+    });
+    return;
+  }
+
+  const isCulturalFramework = (CULTURAL_FRAMEWORK_IDS as readonly string[]).includes(framework);
+  if (!isCulturalFramework && parsedToneStrength) {
+    res.status(400).json({
+      error: "culturalToneStrength can only be used with cultural frameworks",
     });
     return;
   }
@@ -105,7 +150,7 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
     // Validate journal intent first, then extract tags in parallel.
     // reframeText throws NOT_JOURNAL_ENTRY if the content is off-topic.
     const [reframedText, tags] = await Promise.all([
-      reframeText(text.trim(), framework),
+      reframeText(text.trim(), framework, { culturalToneStrength: parsedToneStrength }),
       extractTags(text.trim()),
     ]);
 

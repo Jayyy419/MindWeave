@@ -260,6 +260,19 @@ Write in warm second-person ("you"), 3–5 sentences, no bullet points or headin
 /** Array of valid framework ID strings — used for input validation in routes. */
 export const VALID_FRAMEWORK_IDS = FRAMEWORK_CONFIGS.map((f) => f.id);
 
+export const CULTURAL_FRAMEWORK_IDS = [
+  "singapore",
+  "indonesia",
+  "malaysia",
+  "thailand",
+  "philippines",
+  "vietnam",
+  "brunei",
+  "cambodia",
+  "laos",
+  "myanmar",
+] as const;
+
 /** Map from framework ID to its Gemini system prompt. */
 export const FRAMEWORK_PROMPT_MAP: Record<string, string> = Object.fromEntries(
   FRAMEWORK_CONFIGS.map((f) => [f.id, f.systemPrompt])

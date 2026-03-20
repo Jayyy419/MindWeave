@@ -142,9 +142,12 @@ export type FrameworkId =
   | "laos"
   | "myanmar";
 
+export type CulturalToneStrength = "light" | "medium" | "strong";
+
 export interface CreateEntryRequest {
   text: string;
   framework: FrameworkId;
+  culturalToneStrength?: CulturalToneStrength;
 }
 
 export interface ReframePreviewResponse {

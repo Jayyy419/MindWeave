@@ -22,6 +22,7 @@ Welcome to the MindWeave documentation. Use the links below to navigate.
 | [Vercel Deployment](vercel-deployment.md) | Frontend deployment flow for mindweave.vercel.app, aliasing, protection, env vars |
 | [Developer Workflow](developer-workflow.md) | How to implement, test, commit, push, and deploy changes safely |
 | [Release Checklist](release-checklist.md) | Pre-release and post-release checklist for reliable production deployments |
+| [Framework Catalog](framework-catalog.md) | Canonical list of therapeutic and ASEAN cultural frameworks, including maintenance checklist |
 
 ---
 

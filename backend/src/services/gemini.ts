@@ -1,6 +1,10 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import dotenv from "dotenv";
-import { FRAMEWORK_PROMPT_MAP, FRAMEWORK_FALLBACK_MAP } from "../config/frameworks";
+import {
+  FRAMEWORK_PROMPT_MAP,
+  FRAMEWORK_FALLBACK_MAP,
+  CULTURAL_FRAMEWORK_IDS,
+} from "../config/frameworks";
 
 dotenv.config();
 
@@ -51,6 +55,18 @@ const STOP_WORDS = new Set([
   "your",
 ]);
 
+type CulturalToneStrength = "light" | "medium" | "strong";
+
+function buildCulturalToneInstruction(strength: CulturalToneStrength): string {
+  if (strength === "light") {
+    return "TONE STRENGTH: LIGHT. Keep language mostly neutral and global English. Include only subtle cultural flavor through one small phrase or framing cue at most.";
+  }
+  if (strength === "strong") {
+    return "TONE STRENGTH: STRONG. Keep emotional reasoning strongly aligned to the selected cultural style, but remain clear, respectful, and readable in natural English. Do not caricature or overuse slang.";
+  }
+  return "TONE STRENGTH: MEDIUM. Use a balanced amount of culturally-inspired phrasing and thought structure while preserving clarity and accessibility.";
+}
+
 
 
 function buildFallbackTags(text: string): string[] {
@@ -82,9 +98,10 @@ function buildFallbackTags(text: string): string[] {
 export async function reframeText(
   text: string,
   framework: string,
-  options?: { allowFallback?: boolean }
+  options?: { allowFallback?: boolean; culturalToneStrength?: CulturalToneStrength }
 ): Promise<string> {
   const allowFallback = options?.allowFallback ?? true;
+  const culturalToneStrength = options?.culturalToneStrength ?? "medium";
   const systemPrompt = FRAMEWORK_PROMPT_MAP[framework];
   if (!systemPrompt) {
     throw new Error(`Unknown framework: ${framework}`);
@@ -93,12 +110,17 @@ export async function reframeText(
     throw new Error("Gemini API key is missing");
   }
 
+  const isCulturalFramework = (CULTURAL_FRAMEWORK_IDS as readonly string[]).includes(framework);
+  const promptWithTone = isCulturalFramework
+    ? `${systemPrompt}\n\n${buildCulturalToneInstruction(culturalToneStrength)}`
+    : systemPrompt;
+
   try {
     // Pass the system prompt as a proper systemInstruction (kept separate from
     // the user-supplied text) to reduce the risk of prompt injection.
     const model = genAI.getGenerativeModel({
       model: geminiModel,
-      systemInstruction: systemPrompt,
+      systemInstruction: promptWithTone,
     });
     const result = await model.generateContent(`Journal reflection:\n"${text}"`);
     const reframedText = result.response.text().trim();

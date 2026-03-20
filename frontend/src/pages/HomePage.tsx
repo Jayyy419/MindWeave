@@ -8,7 +8,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createEntry, previewReframe, type FrameworkId } from "@/services/api";
+import {
+  createEntry,
+  previewReframe,
+  type FrameworkId,
+  type CulturalToneStrength,
+} from "@/services/api";
 import { CalendarDays, Heart, Info, Loader2, Pencil, Trash2, X } from "lucide-react";
 
 type FrameworkCategory = "therapeutic" | "cultural";
@@ -17,12 +22,25 @@ type FrameworkDefinition = {
   value: FrameworkId;
   category: FrameworkCategory;
   country?: string;
+  countryExplainer?: string;
   label: string;
   description: string;
   deepExplanation: string;
   bestFor: string;
   caution: string;
 };
+
+const CULTURAL_TONE_OPTIONS: Array<{
+  value: CulturalToneStrength;
+  label: string;
+  hint: string;
+}> = [
+  { value: "light", label: "Light", hint: "Mostly neutral wording" },
+  { value: "medium", label: "Medium", hint: "Balanced cultural flavor" },
+  { value: "strong", label: "Strong", hint: "More culturally-shaped voice" },
+];
+
+const DEFAULT_CULTURAL_TONE_STRENGTH: CulturalToneStrength = "medium";
 
 const FRAMEWORKS = [
   {
@@ -65,6 +83,7 @@ const FRAMEWORKS = [
     value: "singapore",
     category: "cultural",
     country: "Singapore",
+    countryExplainer: "Practical clarity + steady execution",
     label: "Singaporean Grounded Reframe",
     description: "Practical and steady reframing that balances emotion with clear next actions.",
     deepExplanation:
@@ -78,6 +97,7 @@ const FRAMEWORKS = [
     value: "indonesia",
     category: "cultural",
     country: "Indonesia",
+    countryExplainer: "Patience, calm pacing, relational harmony",
     label: "Indonesian Calm Reframe",
     description: "A patient, gentle lens that emphasizes steady progress and emotional balance.",
     deepExplanation:
@@ -91,6 +111,7 @@ const FRAMEWORKS = [
     value: "malaysia",
     category: "cultural",
     country: "Malaysia",
+    countryExplainer: "Balanced perspective + moderate pace",
     label: "Malaysian Balanced Reframe",
     description: "Balances emotional validation with moderation and practical pacing.",
     deepExplanation:
@@ -104,6 +125,7 @@ const FRAMEWORKS = [
     value: "thailand",
     category: "cultural",
     country: "Thailand",
+    countryExplainer: "Gentle tone + emotional de-escalation",
     label: "Thai Gentle Reframe",
     description: "Calm and kind reframing that lowers emotional heat before action.",
     deepExplanation:
@@ -117,6 +139,7 @@ const FRAMEWORKS = [
     value: "philippines",
     category: "cultural",
     country: "Philippines",
+    countryExplainer: "Warmth, resilience, and hopeful action",
     label: "Filipino Resilient Reframe",
     description: "Warm and hopeful reframing that builds resilience and relational strength.",
     deepExplanation:
@@ -130,6 +153,7 @@ const FRAMEWORKS = [
     value: "vietnam",
     category: "cultural",
     country: "Vietnam",
+    countryExplainer: "Perseverance + disciplined progress",
     label: "Vietnamese Perseverance Reframe",
     description: "Effort-focused reframing that turns pressure into disciplined forward motion.",
     deepExplanation:
@@ -143,6 +167,7 @@ const FRAMEWORKS = [
     value: "brunei",
     category: "cultural",
     country: "Brunei",
+    countryExplainer: "Composure, values, and dignified pacing",
     label: "Bruneian Composed Reframe",
     description: "Values-centered reframing that supports calm dignity and wise pacing.",
     deepExplanation:
@@ -156,6 +181,7 @@ const FRAMEWORKS = [
     value: "cambodia",
     category: "cultural",
     country: "Cambodia",
+    countryExplainer: "Gentle rebuilding + stability focus",
     label: "Cambodian Steady Reframe",
     description: "Gentle rebuilding lens focused on stability, dignity, and small wins.",
     deepExplanation:
@@ -169,6 +195,7 @@ const FRAMEWORKS = [
     value: "laos",
     category: "cultural",
     country: "Laos",
+    countryExplainer: "Unhurried clarity + grounded steps",
     label: "Lao Grounded Reframe",
     description: "Unhurried reframing that prioritizes emotional steadiness and simplicity.",
     deepExplanation:
@@ -182,6 +209,7 @@ const FRAMEWORKS = [
     value: "myanmar",
     category: "cultural",
     country: "Myanmar",
+    countryExplainer: "Compassion under pressure + agency",
     label: "Myanmar Resilience Reframe",
     description: "Compassionate-under-pressure reframing that preserves agency and strength.",
     deepExplanation:
@@ -234,6 +262,9 @@ export function HomePage() {
   const [isFrameworkModalOpen, setIsFrameworkModalOpen] = useState(false);
   const [liveReframeDelay, setLiveReframeDelay] =
     useState<LiveReframeDelay>(DEFAULT_LIVE_REFRAME_DELAY);
+  const [culturalToneStrength, setCulturalToneStrength] = useState<CulturalToneStrength>(
+    DEFAULT_CULTURAL_TONE_STRENGTH
+  );
   const [isConfigLocked, setIsConfigLocked] = useState(false);
   const [mood, setMood] = useState("");
   const [intention, setIntention] = useState("");
@@ -255,6 +286,7 @@ export function HomePage() {
     () => FRAMEWORKS.find((item) => item.value === framework),
     [framework]
   );
+  const isCulturalFrameworkSelected = selectedFramework?.category === "cultural";
 
   const therapeuticFrameworks = useMemo(
     () => FRAMEWORKS.filter((item) => item.category === "therapeutic"),
@@ -340,6 +372,7 @@ export function HomePage() {
         text?: string;
         framework?: FrameworkValue;
         liveReframeDelay?: number;
+        culturalToneStrength?: CulturalToneStrength;
         isConfigLocked?: boolean;
         mood?: string;
         intention?: string;
@@ -354,6 +387,12 @@ export function HomePage() {
         LIVE_REFRAME_DELAY_OPTIONS.includes(parsed.liveReframeDelay as (typeof LIVE_REFRAME_DELAY_OPTIONS)[number])
       ) {
         setLiveReframeDelay(parsed.liveReframeDelay as LiveReframeDelay);
+      }
+      if (
+        parsed.culturalToneStrength &&
+        CULTURAL_TONE_OPTIONS.some((option) => option.value === parsed.culturalToneStrength)
+      ) {
+        setCulturalToneStrength(parsed.culturalToneStrength);
       }
       const hasDraftContent = Boolean(parsed.text?.trim()) || (parsed.chunks?.length ?? 0) > 0;
       setIsConfigLocked(parsed.isConfigLocked ?? hasDraftContent);
@@ -372,6 +411,7 @@ export function HomePage() {
         text,
         framework,
         liveReframeDelay,
+        culturalToneStrength,
         isConfigLocked,
         mood,
         intention,
@@ -381,7 +421,17 @@ export function HomePage() {
     }, 450);
 
     return () => clearTimeout(timeout);
-  }, [title, chunks, text, framework, liveReframeDelay, isConfigLocked, mood, intention]);
+  }, [
+    title,
+    chunks,
+    text,
+    framework,
+    liveReframeDelay,
+    culturalToneStrength,
+    isConfigLocked,
+    mood,
+    intention,
+  ]);
 
   useEffect(() => {
     if (editingChunkId) {
@@ -421,6 +471,7 @@ export function HomePage() {
         const preview = await previewReframe({
           text: draftSnapshot,
           framework: framework as PersistedFrameworkValue,
+          culturalToneStrength: isCulturalFrameworkSelected ? culturalToneStrength : undefined,
         });
 
         if (requestId !== liveRequestId.current) return;
@@ -448,7 +499,15 @@ export function HomePage() {
       clearInterval(countdownInterval);
       clearTimeout(timeout);
     };
-  }, [text, framework, editingChunkId, liveReframeDelay, isConfigLocked]);
+  }, [
+    text,
+    framework,
+    editingChunkId,
+    liveReframeDelay,
+    isConfigLocked,
+    isCulturalFrameworkSelected,
+    culturalToneStrength,
+  ]);
 
   function addPrompt(prompt: string) {
     if (remainingWords <= 0) {
@@ -536,6 +595,7 @@ export function HomePage() {
       const preview = await previewReframe({
         text: trimmed,
         framework: framework as PersistedFrameworkValue,
+        culturalToneStrength: isCulturalFrameworkSelected ? culturalToneStrength : undefined,
       });
 
       setChunks((previous) =>
@@ -589,7 +649,11 @@ export function HomePage() {
 
     setLoading(true);
     try {
-      const createdEntry = await createEntry({ text: fullJournalUserText.trim(), framework });
+      const createdEntry = await createEntry({
+        text: fullJournalUserText.trim(),
+        framework,
+        culturalToneStrength: isCulturalFrameworkSelected ? culturalToneStrength : undefined,
+      });
       if (checkInSummary) {
         const raw = localStorage.getItem(ENTRY_SUBTITLES_KEY);
         const existing = raw ? (JSON.parse(raw) as Record<string, string>) : {};
@@ -601,6 +665,7 @@ export function HomePage() {
       setText("");
       setFramework("");
       setLiveReframeDelay(DEFAULT_LIVE_REFRAME_DELAY);
+      setCulturalToneStrength(DEFAULT_CULTURAL_TONE_STRENGTH);
       setIsConfigLocked(false);
       setMood("");
       setIntention("");
@@ -659,6 +724,38 @@ export function HomePage() {
                 </p>
               )}
             </div>
+
+            {isCulturalFrameworkSelected && (
+              <div className="rounded-2xl border border-indigo-200/80 bg-indigo-50/60 p-4">
+                <label className="mb-2 block text-sm font-medium text-stone-700">
+                  Cultural tone strength
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {CULTURAL_TONE_OPTIONS.map((option) => {
+                    const selected = culturalToneStrength === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setCulturalToneStrength(option.value)}
+                        disabled={loading || isConfigLocked}
+                        className={`rounded-lg border px-2 py-2 text-left transition-colors ${
+                          selected
+                            ? "border-indigo-400 bg-indigo-100 text-indigo-900"
+                            : "border-indigo-200 bg-white text-stone-700 hover:border-indigo-300"
+                        }`}
+                      >
+                        <p className="text-xs font-semibold">{option.label}</p>
+                        <p className="mt-0.5 text-[11px] leading-tight text-stone-500">{option.hint}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-2 text-xs text-stone-500">
+                  Adjust how much regional style appears in wording and voice.
+                </p>
+              </div>
+            )}
 
             <div className="rounded-2xl border border-amber-200/80 bg-white/75 p-4">
               <label className="mb-2 block text-sm font-medium text-stone-700">
@@ -1074,6 +1171,11 @@ export function HomePage() {
                             </span>
                           )}
                         </div>
+                        {fw.countryExplainer && (
+                          <p className="mt-2 inline-flex rounded-full border border-indigo-200/80 bg-indigo-50 px-2.5 py-0.5 text-[11px] text-indigo-800">
+                            {fw.countryExplainer}
+                          </p>
+                        )}
                         <p className="mt-2 text-sm text-stone-600">{fw.description}</p>
 
                         <div className="mt-3 rounded-lg border border-indigo-100 bg-indigo-50/55 p-3">

@@ -14,10 +14,13 @@ import { ArrowRight, CheckCircle, Loader2, Lock, Sparkles, Users, X } from "luci
 export function ThinkTanksPage() {
   const [allTanks, setAllTanks] = useState<ThinkTankPreview[]>([]);
   const [availableTanks, setAvailableTanks] = useState<ThinkTankPreview[]>([]);
+  const [unlockMessage, setUnlockMessage] = useState(
+    "Continue using your journal consistently to reveal and unlock Think Tanks."
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [joiningId, setJoiningId] = useState<string | null>(null);
-  const [lockedTankName, setLockedTankName] = useState<string | null>(null);
+  const [isHiddenTankModalOpen, setIsHiddenTankModalOpen] = useState(false);
 
   async function loadData() {
     try {
@@ -27,6 +30,10 @@ export function ThinkTanksPage() {
       ]);
       setAllTanks(allData);
       setAvailableTanks(availableData.available);
+      setUnlockMessage(
+        availableData.message ||
+          "Keep journaling to unlock more Think Tanks and reveal better-fitting spaces."
+      );
     } catch (err: any) {
       setError(err.message || "Failed to load think tanks");
     } finally {
@@ -55,8 +62,8 @@ export function ThinkTanksPage() {
     [availableTanks]
   );
 
-  const unlockedTanks = allTanks.filter((tank) => tank.isJoined || unlockedIds.has(tank.id));
-  const lockedTanks = allTanks.filter((tank) => !tank.isJoined && !unlockedIds.has(tank.id));
+  const joinedTanks = allTanks.filter((tank) => tank.isJoined);
+  const hiddenTanks = allTanks.filter((tank) => !tank.isJoined);
 
   if (loading) {
     return (
@@ -75,7 +82,7 @@ export function ThinkTanksPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6">
       <div className="rounded-2xl border border-amber-200/80 bg-[linear-gradient(145deg,#fff9ee_0%,#fffef7_45%,#f8f8ef_100%)] p-5 shadow-[0_16px_44px_-30px_rgba(74,53,21,0.45)]">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -87,21 +94,36 @@ export function ThinkTanksPage() {
           </Badge>
         </div>
         <p className="mt-3 text-sm leading-6 text-stone-600">
-          Think Tanks unlock over time through authentic reflection signals. Some groups stay intentionally locked until your fit is clear.
+          Think Tanks unlock over time through authentic reflection signals. Specific groups stay hidden until your journaling activity reveals a stronger fit.
         </p>
       </div>
 
-      {unlockedTanks.length > 0 && (
+      <div className="rounded-2xl border border-indigo-200/80 bg-[linear-gradient(145deg,#eef4ff_0%,#f8fbff_52%,#f2f4ff_100%)] p-5 shadow-[0_18px_40px_-30px_rgba(56,88,167,0.45)]">
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-indigo-600 text-white">
+            <Sparkles className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-stone-900">Keep journaling to unlock Think Tanks</h2>
+            <p className="mt-1 text-sm leading-6 text-stone-700">{unlockMessage}</p>
+          </div>
+        </div>
+        <p className="mt-3 text-xs uppercase tracking-[0.14em] text-indigo-700/75">
+          Write more entries, build your reflection profile, and hidden communities will reveal themselves automatically.
+        </p>
+      </div>
+
+      {joinedTanks.length > 0 && (
         <section className="space-y-3">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-amber-700" />
-            <h2 className="text-lg font-semibold text-stone-800">Accessible Groups</h2>
+            <h2 className="text-lg font-semibold text-stone-800">Your Think Tanks</h2>
             <Badge variant="outline" className="border-amber-300 bg-white/70 text-xs text-stone-700">
-              {unlockedTanks.length}
+              {joinedTanks.length}
             </Badge>
           </div>
           <div className="space-y-4">
-            {unlockedTanks.map((tank) => (
+            {joinedTanks.map((tank) => (
               <UnlockedTankCard
                 key={tank.id}
                 tank={tank}
@@ -113,31 +135,33 @@ export function ThinkTanksPage() {
         </section>
       )}
 
-      {lockedTanks.length > 0 && (
+      {hiddenTanks.length > 0 && (
         <section className="space-y-3">
           <div className="flex items-center gap-2">
             <Lock className="h-4 w-4 text-stone-600" />
-            <h2 className="text-lg font-semibold text-stone-800">Locked Groups</h2>
+            <h2 className="text-lg font-semibold text-stone-800">Sneak Peek</h2>
             <Badge variant="outline" className="border-stone-300 bg-white/70 text-xs text-stone-700">
-              {lockedTanks.length}
+              {hiddenTanks.length}
             </Badge>
           </div>
-          <div className="space-y-4">
-            {lockedTanks.map((tank) => (
+          <div className="grid gap-4 lg:grid-cols-2">
+            {hiddenTanks.map((tank, index) => (
               <LockedTankCard
                 key={tank.id}
                 tank={tank}
-                onLockedClick={() => setLockedTankName(tank.name)}
+                index={index}
+                isAvailable={unlockedIds.has(tank.id)}
+                onLockedClick={() => setIsHiddenTankModalOpen(true)}
               />
             ))}
           </div>
         </section>
       )}
 
-      {lockedTankName && (
+      {isHiddenTankModalOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4"
-          onClick={() => setLockedTankName(null)}
+          onClick={() => setIsHiddenTankModalOpen(false)}
           role="presentation"
         >
           <div
@@ -147,10 +171,10 @@ export function ThinkTanksPage() {
             aria-modal="true"
           >
             <div className="mb-3 flex items-start justify-between">
-              <h3 className="text-lg font-semibold text-stone-800">{lockedTankName} is Locked</h3>
+              <h3 className="text-lg font-semibold text-stone-800">This Think Tank Is Hidden</h3>
               <button
                 type="button"
-                onClick={() => setLockedTankName(null)}
+                onClick={() => setIsHiddenTankModalOpen(false)}
                 className="inline-flex items-center rounded-md border border-amber-200 bg-white px-2 py-1 text-sm text-stone-600 hover:bg-amber-50"
                 aria-label="Close"
               >
@@ -236,35 +260,45 @@ function UnlockedTankCard({
 
 function LockedTankCard({
   tank,
+  index,
+  isAvailable,
   onLockedClick,
 }: {
   tank: ThinkTankPreview;
+  index: number;
+  isAvailable: boolean;
   onLockedClick: () => void;
 }) {
+  const teaserLines = [
+    "A small circle matched to your reflection patterns.",
+    "Hidden until your journaling rhythm reveals a stronger fit.",
+    "Keep writing to surface the communities meant for you.",
+  ];
+
   return (
     <button type="button" onClick={onLockedClick} className="block w-full text-left">
       <Card className="border-stone-200/90 bg-[repeating-linear-gradient(to_bottom,#faf9f4_0px,#faf9f4_30px,#e7e3d9_31px)] opacity-90 shadow-[0_12px_32px_-28px_rgba(70,70,70,0.45)] transition-all hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-26px_rgba(70,70,70,0.5)]">
         <CardHeader className="pb-2 pt-4">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <CardTitle className="text-base text-stone-700">{tank.name}</CardTitle>
+              <CardTitle className="text-base text-stone-700">Hidden Think Tank {String(index + 1).padStart(2, "0")}</CardTitle>
               <p className="mt-1 text-sm leading-6 text-stone-500">
-                Group details are partially hidden until this space unlocks for you.
+                {teaserLines[index % teaserLines.length]}
               </p>
             </div>
             <span className="inline-flex items-center gap-1 rounded-md border border-stone-300 bg-white/80 px-2 py-1 text-xs text-stone-600">
               <Lock className="h-3.5 w-3.5" />
-              Locked
+              {isAvailable ? "Still hidden" : "Locked"}
             </span>
           </div>
         </CardHeader>
         <CardContent className="pb-4">
           <div className="flex flex-wrap gap-1.5">
             <Badge variant="outline" className="border-stone-300 bg-white/70 text-xs text-stone-500">
-              Criteria hidden
+              Journaling unlock
             </Badge>
             <Badge variant="outline" className="border-stone-300 bg-white/70 text-xs text-stone-500">
-              Unlocks automatically
+              Details concealed
             </Badge>
           </div>
         </CardContent>

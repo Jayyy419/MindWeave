@@ -399,7 +399,7 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6">
       <div className="rounded-2xl border border-amber-200/80 bg-[linear-gradient(145deg,#fff9ee_0%,#fffef7_45%,#f8f8ef_100%)] p-5 shadow-[0_16px_44px_-30px_rgba(74,53,21,0.45)]">
         <h1 className="text-2xl font-bold text-stone-800">Settings</h1>
         <p className="mt-1 text-sm text-stone-600">Customize your MindWeave experience</p>

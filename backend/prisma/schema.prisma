@@ -47,8 +47,10 @@ model Entry {
   id           String   @id @default(cuid())
   userId       String
   framework    String   // "cbt" | "iceberg" | "growth"
+  title        String   @default("")
   originalText String
   reframedText String
+  chunks       String   @default("[]") // JSON array of { id, userText, aiText }
   tags         String   @default("[]") // JSON array of extracted tags for this entry
   createdAt    DateTime @default(now())
   user         User     @relation(fields: [userId], references: [id])

@@ -13,6 +13,7 @@ import {
   previewReframe,
   type FrameworkId,
   type CulturalToneStrength,
+  type EntryChunk,
 } from "@/services/api";
 import { CalendarDays, Heart, Info, Loader2, Pencil, Trash2, X } from "lucide-react";
 
@@ -248,15 +249,9 @@ const MAX_ENTRY_WORDS = 100;
 type FrameworkValue = FrameworkId | "";
 type PersistedFrameworkValue = Exclude<FrameworkValue, "">;
 
-type JournalChunk = {
-  id: string;
-  userText: string;
-  aiText: string;
-};
-
 export function HomePage() {
   const [title, setTitle] = useState("");
-  const [chunks, setChunks] = useState<JournalChunk[]>([]);
+  const [chunks, setChunks] = useState<EntryChunk[]>([]);
   const [text, setText] = useState("");
   const [framework, setFramework] = useState<FrameworkValue>("");
   const [isFrameworkModalOpen, setIsFrameworkModalOpen] = useState(false);
@@ -281,6 +276,8 @@ export function HomePage() {
   const [editError, setEditError] = useState("");
   const [showMoodInfo, setShowMoodInfo] = useState(false);
   const liveRequestId = useRef(0);
+  const liveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const liveCountdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const selectedFramework = useMemo(
     () => FRAMEWORKS.find((item) => item.value === framework),
@@ -368,7 +365,7 @@ export function HomePage() {
     try {
       const parsed = JSON.parse(rawDraft) as {
         title?: string;
-        chunks?: JournalChunk[];
+        chunks?: EntryChunk[];
         text?: string;
         framework?: FrameworkValue;
         liveReframeDelay?: number;
@@ -460,44 +457,15 @@ export function HomePage() {
         return value - 1;
       });
     }, 1000);
+    liveCountdownIntervalRef.current = countdownInterval;
 
-    const timeout = setTimeout(async () => {
-      clearInterval(countdownInterval);
-      setLiveCountdown(null);
-      setLiveLoading(true);
-      setLiveError("");
-
-      try {
-        const preview = await previewReframe({
-          text: draftSnapshot,
-          framework: framework as PersistedFrameworkValue,
-          culturalToneStrength: isCulturalFrameworkSelected ? culturalToneStrength : undefined,
-        });
-
-        if (requestId !== liveRequestId.current) return;
-        if (text.trim() !== draftSnapshot) return;
-
-        setChunks((previous) => [
-          ...previous,
-          {
-            id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
-            userText: draftSnapshot,
-            aiText: preview.reframedText,
-          },
-        ]);
-        setText("");
-      } catch (err: any) {
-        if (requestId !== liveRequestId.current) return;
-        setLiveError(err.message || "Could not generate live reframing preview");
-      } finally {
-        if (requestId !== liveRequestId.current) return;
-        setLiveLoading(false);
-      }
+    const timeout = setTimeout(() => {
+      void commitLiveReframe(draftSnapshot, requestId);
     }, liveReframeDelay * 1000);
+    liveTimeoutRef.current = timeout;
 
     return () => {
-      clearInterval(countdownInterval);
-      clearTimeout(timeout);
+      clearLiveReframeTimers();
     };
   }, [
     text,
@@ -538,7 +506,7 @@ export function HomePage() {
     }
   }
 
-  function beginEditChunk(chunk: JournalChunk) {
+  function beginEditChunk(chunk: EntryChunk) {
     setEditingChunkId(chunk.id);
     setEditingUserText(chunk.userText);
     setEditError("");
@@ -555,6 +523,89 @@ export function HomePage() {
     setFramework(nextFramework);
     setIsFrameworkModalOpen(false);
     setLiveError("");
+  }
+
+  function clearLiveReframeTimers() {
+    if (liveTimeoutRef.current) {
+      clearTimeout(liveTimeoutRef.current);
+      liveTimeoutRef.current = null;
+    }
+    if (liveCountdownIntervalRef.current) {
+      clearInterval(liveCountdownIntervalRef.current);
+      liveCountdownIntervalRef.current = null;
+    }
+  }
+
+  async function commitLiveReframe(draftSnapshot: string, requestId: number) {
+    clearLiveReframeTimers();
+    setLiveCountdown(null);
+    setLiveLoading(true);
+    setLiveError("");
+
+    try {
+      const preview = await previewReframe({
+        text: draftSnapshot,
+        framework: framework as PersistedFrameworkValue,
+        culturalToneStrength: isCulturalFrameworkSelected ? culturalToneStrength : undefined,
+      });
+
+      if (requestId !== liveRequestId.current) return;
+      if (text.trim() !== draftSnapshot) return;
+
+      setChunks((previous) => [
+        ...previous,
+        {
+          id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          userText: draftSnapshot,
+          aiText: preview.reframedText,
+        },
+      ]);
+      setText("");
+    } catch (err: any) {
+      if (requestId !== liveRequestId.current) return;
+      setLiveError(err.message || "Could not generate live reframing preview");
+    } finally {
+      if (requestId !== liveRequestId.current) return;
+      setLiveLoading(false);
+    }
+  }
+
+  async function triggerImmediateReframe() {
+    if (!framework) {
+      setLiveError("Choose a framework before reframing.");
+      return;
+    }
+
+    const draftSnapshot = text.trim();
+    if (draftSnapshot.length < 5) {
+      setLiveError("Write at least 5 characters before reframing.");
+      return;
+    }
+
+    const requestId = ++liveRequestId.current;
+    await commitLiveReframe(draftSnapshot, requestId);
+  }
+
+  function buildEntryChunksForSave(): EntryChunk[] {
+    const committedChunks = chunks.map((chunk) => ({
+      id: chunk.id,
+      userText: chunk.userText,
+      aiText: chunk.aiText,
+    }));
+
+    const pendingDraft = text.trim();
+    if (!pendingDraft) {
+      return committedChunks;
+    }
+
+    return [
+      ...committedChunks,
+      {
+        id: `draft-${Date.now()}`,
+        userText: pendingDraft,
+        aiText: "",
+      },
+    ];
   }
 
   function confirmConfiguration() {
@@ -650,9 +701,11 @@ export function HomePage() {
     setLoading(true);
     try {
       const createdEntry = await createEntry({
+        title: title.trim(),
         text: fullJournalUserText.trim(),
         framework,
         culturalToneStrength: isCulturalFrameworkSelected ? culturalToneStrength : undefined,
+        chunks: buildEntryChunksForSave(),
       });
       if (checkInSummary) {
         const raw = localStorage.getItem(ENTRY_SUBTITLES_KEY);
@@ -681,8 +734,8 @@ export function HomePage() {
   }
 
   return (
-    <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen min-h-[calc(100vh-7rem)] bg-[repeating-linear-gradient(to_bottom,#fffef9_0px,#fffef9_34px,#ece7dc_35px)] px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl space-y-6">
+    <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen min-h-[calc(100vh-7rem)] bg-[repeating-linear-gradient(to_bottom,#fffef9_0px,#fffef9_34px,#ece7dc_35px)] px-3 py-6 sm:px-5 lg:px-6">
+      <div className="mx-auto max-w-[92rem] space-y-6">
       <section className="rounded-3xl border border-amber-200/70 bg-[linear-gradient(140deg,#fff8ea_0%,#fffdf6_45%,#f6f7ee_100%)] p-6 shadow-[0_24px_60px_-32px_rgba(94,72,36,0.35)] sm:p-8">
         <div className="mb-5 flex flex-col items-center gap-3 text-center">
           <div>
@@ -778,7 +831,7 @@ export function HomePage() {
                 </SelectContent>
               </Select>
               <p className="mt-2 text-xs text-stone-500">
-                Choose how long to pause after typing before auto-reframing starts.
+                Choose how long to pause after typing before auto-reframing starts. Press Enter to fast-forward reframing instantly. Use Shift+Enter for a new line.
               </p>
             </div>
 
@@ -895,6 +948,12 @@ export function HomePage() {
                       } else {
                         setError("");
                       }
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key !== "Enter" || event.shiftKey) return;
+                      event.preventDefault();
+                      if (!isConfigLocked || loading || liveLoading) return;
+                      void triggerImmediateReframe();
                     }}
                     className="min-h-[140px] w-full flex-1 resize-none border-0 bg-transparent p-0 text-[17px] leading-[31px] text-stone-800 placeholder:text-stone-400 focus:outline-none"
                     style={{ fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif" }}

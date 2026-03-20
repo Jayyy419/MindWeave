@@ -113,16 +113,25 @@ export async function resetPassword(token: string, password: string): Promise<{ 
 
 export interface EntryPreview {
   id: string;
+  title: string;
   framework: string;
   preview: string;
   createdAt: string;
 }
 
+export interface EntryChunk {
+  id: string;
+  userText: string;
+  aiText: string;
+}
+
 export interface EntryDetail {
   id: string;
+  title: string;
   framework: string;
   originalText: string;
   reframedText: string;
+  chunks: EntryChunk[];
   tags: string[];
   createdAt: string;
 }
@@ -144,10 +153,15 @@ export type FrameworkId =
 
 export type CulturalToneStrength = "light" | "medium" | "strong";
 
-export interface CreateEntryRequest {
+export interface ReframeRequest {
   text: string;
   framework: FrameworkId;
   culturalToneStrength?: CulturalToneStrength;
+}
+
+export interface CreateEntryRequest extends ReframeRequest {
+  title: string;
+  chunks?: EntryChunk[];
 }
 
 export interface ReframePreviewResponse {
@@ -223,7 +237,7 @@ export async function createEntry(data: CreateEntryRequest): Promise<EntryDetail
 }
 
 /** Generate a live reframing preview without saving an entry */
-export async function previewReframe(data: CreateEntryRequest): Promise<ReframePreviewResponse> {
+export async function previewReframe(data: ReframeRequest): Promise<ReframePreviewResponse> {
   const res = await fetch(`${API_BASE_URL}/entries/reframe-preview`, {
     method: "POST",
     headers: headers(),

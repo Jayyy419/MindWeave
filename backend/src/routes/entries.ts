@@ -10,9 +10,15 @@ const MAX_ENTRY_WORDS = 100;
 
 const OFF_TOPIC_ERROR =
   "MindWeave is a personal journaling tool. Please write about your own thoughts, feelings, and experiences.";
+const MAX_TITLE_LENGTH = 100;
 const VALID_CULTURAL_TONE_STRENGTHS = ["light", "medium", "strong"] as const;
 
 type CulturalToneStrength = (typeof VALID_CULTURAL_TONE_STRENGTHS)[number];
+type EntryChunk = {
+  id: string;
+  userText: string;
+  aiText: string;
+};
 
 function parseCulturalToneStrength(value: unknown): CulturalToneStrength | undefined {
   if (typeof value !== "string") return undefined;
@@ -25,6 +31,44 @@ function countWords(value: string): number {
   const trimmed = value.trim();
   if (!trimmed) return 0;
   return trimmed.split(/\s+/).length;
+}
+
+function parseEntryChunks(value: unknown): EntryChunk[] {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .filter(
+      (chunk): chunk is EntryChunk =>
+        typeof chunk === "object" &&
+        chunk !== null &&
+        typeof (chunk as EntryChunk).id === "string" &&
+        typeof (chunk as EntryChunk).userText === "string" &&
+        typeof (chunk as EntryChunk).aiText === "string"
+    )
+    .map((chunk) => ({
+      id: chunk.id.trim(),
+      userText: chunk.userText.trim(),
+      aiText: chunk.aiText.trim(),
+    }))
+    .filter((chunk) => chunk.id.length > 0 && chunk.userText.length > 0);
+}
+
+function getStoredChunks(chunksRaw: string, originalText: string, reframedText: string): EntryChunk[] {
+  try {
+    const parsed = JSON.parse(chunksRaw) as EntryChunk[];
+    const chunks = parseEntryChunks(parsed);
+    if (chunks.length > 0) return chunks;
+  } catch {
+    // Fall through to legacy compatibility format.
+  }
+
+  return [
+    {
+      id: "legacy-1",
+      userText: originalText,
+      aiText: reframedText,
+    },
+  ];
 }
 
 /**
@@ -104,9 +148,19 @@ router.post("/reframe-preview", async (req: Request, res: Response): Promise<voi
  */
 router.post("/", async (req: Request, res: Response): Promise<void> => {
   const userId = (req as any).userId as string;
-  const { text, framework, culturalToneStrength } = req.body;
+  const { title, text, framework, culturalToneStrength, chunks } = req.body;
 
   // Validate input
+  if (typeof title !== "string" || title.trim().length === 0) {
+    res.status(400).json({ error: "title is required and must be a non-empty string" });
+    return;
+  }
+
+  if (title.trim().length > MAX_TITLE_LENGTH) {
+    res.status(400).json({ error: `title must be ${MAX_TITLE_LENGTH} characters or fewer` });
+    return;
+  }
+
   if (!text || typeof text !== "string" || text.trim().length === 0) {
     res.status(400).json({ error: "text is required and must be a non-empty string" });
     return;
@@ -146,6 +200,8 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
+  const parsedChunks = parseEntryChunks(chunks);
+
   try {
     // Validate journal intent first, then extract tags in parallel.
     // reframeText throws NOT_JOURNAL_ENTRY if the content is off-topic.
@@ -158,9 +214,11 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
     const entry = await prisma.entry.create({
       data: {
         userId,
+        title: title.trim(),
         framework,
         originalText: text.trim(),
         reframedText,
+        chunks: JSON.stringify(parsedChunks),
         tags: JSON.stringify(tags),
       },
     });
@@ -170,9 +228,11 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
 
     res.status(201).json({
       id: entry.id,
+      title: entry.title,
       framework: entry.framework,
       originalText: entry.originalText,
       reframedText: entry.reframedText,
+      chunks: getStoredChunks(entry.chunks, entry.originalText, entry.reframedText),
       tags,
       createdAt: entry.createdAt,
     });
@@ -200,6 +260,7 @@ router.get("/", async (req: Request, res: Response): Promise<void> => {
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
+        title: true,
         framework: true,
         originalText: true,
         createdAt: true,
@@ -209,6 +270,7 @@ router.get("/", async (req: Request, res: Response): Promise<void> => {
     // Return entries with a text preview
     const result = entries.map((e) => ({
       id: e.id,
+      title: e.title,
       framework: e.framework,
       preview:
         e.originalText.length > 120
@@ -244,9 +306,11 @@ router.get("/:id", async (req: Request, res: Response): Promise<void> => {
 
     res.json({
       id: entry.id,
+      title: entry.title,
       framework: entry.framework,
       originalText: entry.originalText,
       reframedText: entry.reframedText,
+      chunks: getStoredChunks(entry.chunks, entry.originalText, entry.reframedText),
       tags: JSON.parse(entry.tags),
       createdAt: entry.createdAt,
     });

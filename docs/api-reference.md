@@ -159,21 +159,40 @@ Create a new journal entry. The backend calls Gemini to produce a reframed versi
 **Request body**
 ```json
 {
+  "title": "Tough day at work",
   "text": "I keep making mistakes at work and I feel useless.",
-  "framework": "cbt"
+  "framework": "cbt",
+  "chunks": [
+    {
+      "id": "chunk-1",
+      "userText": "I keep making mistakes at work and I feel useless.",
+      "aiText": "Making mistakes at work does not define my worth; I can learn from this and improve step by step."
+    }
+  ]
 }
 ```
 
-`framework` must be one of: `"cbt"`, `"iceberg"`, `"growth"`  
+`title` is required and must be 100 characters or fewer.  
+`framework` must be one of the supported therapeutic or ASEAN cultural frameworks.  
 `text` must be ≤ 5 000 characters.
+
+`chunks` is optional for backwards compatibility, but when provided it is stored and replayed in Memory Lane.
 
 **Response `201`**
 ```json
 {
   "id": "clyyy",
+  "title": "Tough day at work",
   "framework": "cbt",
   "originalText": "I keep making mistakes at work and I feel useless.",
   "reframedText": "Everyone makes mistakes — they're opportunities to learn ...",
+  "chunks": [
+    {
+      "id": "chunk-1",
+      "userText": "I keep making mistakes at work and I feel useless.",
+      "aiText": "Making mistakes at work does not define my worth; I can learn from this and improve step by step."
+    }
+  ],
   "tags": ["work-stress", "self-worth"],
   "createdAt": "2026-03-15T12:00:00.000Z"
 }
@@ -183,9 +202,41 @@ Create a new journal entry. The backend calls Gemini to produce a reframed versi
 
 | Status | Reason |
 |---|---|
-| `400` | Missing / empty text, invalid framework, text > 5 000 chars |
+| `400` | Missing / empty title or text, invalid framework, text > 5 000 chars |
 | `401` | No or invalid JWT |
 | `500` | Gemini API failure |
+
+---
+
+### POST /api/entries/reframe-preview
+
+Generate a live reframing preview without saving the entry.
+
+**Request body**
+```json
+{
+  "text": "I keep making mistakes at work and I feel useless.",
+  "framework": "cbt"
+}
+```
+
+**Response `200`**
+```json
+{
+  "originalText": "I keep making mistakes at work and I feel useless.",
+  "reframedText": "Making mistakes at work does not define my worth; I can learn from this and improve step by step.",
+  "framework": "cbt",
+  "source": "ai"
+}
+```
+
+**Errors**
+
+| Status | Reason |
+|---|---|
+| `400` | Missing / empty text, invalid framework, invalid cultural tone strength |
+| `422` | Off-topic text that is not a journal-style personal reflection |
+| `503` | Live AI reframing temporarily unavailable |
 
 ---
 
@@ -198,6 +249,7 @@ List all entries for the authenticated user, newest first. Returns a 120-charact
 [
   {
     "id": "clyyy",
+    "title": "Tough day at work",
     "framework": "cbt",
     "preview": "I keep making mistakes at work and I feel useless.",
     "createdAt": "2026-03-15T12:00:00.000Z"
@@ -215,9 +267,17 @@ Get the full detail of one entry. Only accessible to the entry's owner.
 ```json
 {
   "id": "clyyy",
+  "title": "Tough day at work",
   "framework": "cbt",
   "originalText": "...",
   "reframedText": "...",
+  "chunks": [
+    {
+      "id": "chunk-1",
+      "userText": "I keep making mistakes at work and I feel useless.",
+      "aiText": "Making mistakes at work does not define my worth; I can learn from this and improve step by step."
+    }
+  ],
   "tags": ["work-stress"],
   "createdAt": "2026-03-15T12:00:00.000Z"
 }

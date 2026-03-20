@@ -142,7 +142,7 @@ export function HistoryPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6">
       <div className="rounded-2xl border border-amber-200/80 bg-[linear-gradient(145deg,#fff9ee_0%,#fffef7_45%,#f8f8ef_100%)] p-5 shadow-[0_16px_44px_-30px_rgba(74,53,21,0.45)]">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
@@ -212,12 +212,15 @@ export function HistoryPage() {
                     />
                     <div className="min-w-0 flex-1">
                       <p className="text-xs uppercase tracking-[0.14em] text-amber-700/75">Journal note</p>
+                      {entry.title && (
+                        <h2 className="mt-1 text-lg font-semibold text-stone-800">{entry.title}</h2>
+                      )}
                       {entrySubtitles[entry.id] && (
                         <p className="mt-1 text-xs font-medium italic text-stone-600">
                           {entrySubtitles[entry.id]}
                         </p>
                       )}
-                      <p className="mt-1 text-sm leading-7 text-stone-700">{entry.preview}</p>
+                      <p className="mt-2 text-sm leading-7 text-stone-700">{entry.preview}</p>
                     </div>
                   </div>
 

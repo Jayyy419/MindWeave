@@ -50,7 +50,7 @@ export function ProfilePage() {
   const progressToNext = ((profile.entryCount % 5) / 5) * 100;
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="mx-auto max-w-5xl space-y-6">
       <h1 className="text-2xl font-bold flex items-center gap-2">
         <Trophy className="h-6 w-6 text-purple-600" />
         Your Profile

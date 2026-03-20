@@ -2,6 +2,34 @@
 
 This changelog captures the implementation history from the start of this project session through the most recent deployment.
 
+## 2026-03-20 — Journal Replay, Faster Reframing, and Hidden Think Tanks
+
+### Journal Writing Flow
+- Added Enter-to-reframe behavior in the main journal editor so users can immediately commit a live reframe without waiting for the countdown.
+- Preserved Shift+Enter for newline insertion while drafting.
+- Persisted journal entry titles with each saved entry.
+- Persisted chunk-level journal replay data so each saved entry can retain the exact block-by-block user text and live AI reframes shown during writing.
+
+### Memory Lane
+- Updated Memory Lane cards to show saved entry titles.
+- Reworked Memory Lane detail view to replay saved journal chunks instead of only showing one flattened original text block.
+- Added legacy fallback so older entries without chunk data still render correctly.
+
+### Think Tanks
+- Changed Think Tanks discovery to a stronger concealment model:
+	- only joined tanks are shown directly
+	- non-joined tanks appear as teaser cards
+	- hidden tank dialogs no longer reveal real group names
+- Added stronger unlock messaging that encourages continued journaling instead of exposing matching details.
+
+### Layout and Density
+- Reduced side whitespace across the main app shell and widened key pages including Journal, Memory Lane, Think Tanks, Profile, and Settings.
+
+### Backend and Data Model
+- Added `Entry.title` to support named journal entries.
+- Added `Entry.chunks` to store chunk-level replay data as JSON.
+- Updated entry create/list/detail APIs to return title and chunk replay data.
+
 ## 2026-03-20 — Product, UX, and Hosting Overhaul
 
 ### Journal UX and Writing Flow

@@ -75,8 +75,10 @@ A single journal entry created by a user.
 | `id` | `String` PK | `cuid()` |
 | `userId` | `String` FK | References `User.id` |
 | `framework` | `String` | `"cbt"` \| `"iceberg"` \| `"growth"` |
+| `title` | `String` | User-supplied entry title; defaults to empty string for legacy rows |
 | `originalText` | `String` | The user's raw journal text (max 5 000 chars enforced at API layer) |
 | `reframedText` | `String` | AI-generated reframe from Gemini |
+| `chunks` | `String` | JSON array of saved replay blocks: `{ id, userText, aiText }[]` |
 | `tags` | `String` | JSON array of topic tags extracted by Gemini |
 | `createdAt` | `DateTime` | Auto-set on creation |
 
@@ -159,6 +161,7 @@ Fields stored as JSON strings:
 | `User` | `badges` | `string[]` (badge names) |
 | `User` | `tags` | `string[]` (interest topic tags) |
 | `ThinkTank` | `tags` | `string[]` (interest topic tags) |
+| `Entry` | `chunks` | `{ id: string; userText: string; aiText: string }[]` |
 | `Entry` | `tags` | `string[]` (topic tags from this entry) |
 
 > These could be migrated to a native `jsonb` column (PostgreSQL-only) or a proper join table in a future schema revision.

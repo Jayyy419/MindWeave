@@ -10,6 +10,16 @@ const FRAMEWORK_LABELS: Record<string, string> = {
   cbt: "CBT (Cognitive Behavioral Therapy)",
   iceberg: "Iceberg Model",
   growth: "Growth Mindset",
+  singapore: "Singaporean Grounded Reframe",
+  indonesia: "Indonesian Calm Reframe",
+  malaysia: "Malaysian Balanced Reframe",
+  thailand: "Thai Gentle Reframe",
+  philippines: "Filipino Resilient Reframe",
+  vietnam: "Vietnamese Perseverance Reframe",
+  brunei: "Bruneian Composed Reframe",
+  cambodia: "Cambodian Steady Reframe",
+  laos: "Lao Grounded Reframe",
+  myanmar: "Myanmar Resilience Reframe",
 };
 
 export function EntryDetailPage() {

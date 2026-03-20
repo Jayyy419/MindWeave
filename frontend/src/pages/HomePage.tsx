@@ -8,12 +8,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createEntry, previewReframe } from "@/services/api";
+import { createEntry, previewReframe, type FrameworkId } from "@/services/api";
 import { CalendarDays, Heart, Info, Loader2, Pencil, Trash2, X } from "lucide-react";
+
+type FrameworkCategory = "therapeutic" | "cultural";
+
+type FrameworkDefinition = {
+  value: FrameworkId;
+  category: FrameworkCategory;
+  country?: string;
+  label: string;
+  description: string;
+  deepExplanation: string;
+  bestFor: string;
+  caution: string;
+};
 
 const FRAMEWORKS = [
   {
     value: "cbt",
+    category: "therapeutic",
     label: "CBT (Cognitive Behavioral Therapy)",
     description: "Identifies thinking distortions and helps you build a balanced perspective.",
     deepExplanation:
@@ -25,6 +39,7 @@ const FRAMEWORKS = [
   },
   {
     value: "iceberg",
+    category: "therapeutic",
     label: "Iceberg Model",
     description: "Looks beneath surface reactions to uncover deeper feelings and needs.",
     deepExplanation:
@@ -36,6 +51,7 @@ const FRAMEWORKS = [
   },
   {
     value: "growth",
+    category: "therapeutic",
     label: "Growth Mindset",
     description: "Transforms fixed, self-limiting conclusions into learning-oriented next steps.",
     deepExplanation:
@@ -45,7 +61,137 @@ const FRAMEWORKS = [
     caution:
       "Can feel dismissive if pain is intense. Validate your feelings first, then move into growth framing so it does not sound like forced positivity.",
   },
-] as const;
+  {
+    value: "singapore",
+    category: "cultural",
+    country: "Singapore",
+    label: "Singaporean Grounded Reframe",
+    description: "Practical and steady reframing that balances emotion with clear next actions.",
+    deepExplanation:
+      "This lens mirrors a grounded Singaporean communication style: direct, realistic, and calm under pressure. It validates feelings, then helps you focus on what can be done next without overcomplicating the moment.",
+    bestFor:
+      "When you feel overloaded and need a practical reset, clearer priorities, and one concrete action to move forward.",
+    caution:
+      "Avoid using this lens as pure problem-solving if your emotions are raw. Name the feeling first, then move into practical steps.",
+  },
+  {
+    value: "indonesia",
+    category: "cultural",
+    country: "Indonesia",
+    label: "Indonesian Calm Reframe",
+    description: "A patient, gentle lens that emphasizes steady progress and emotional balance.",
+    deepExplanation:
+      "Inspired by values of patience and relational harmony, this framework helps you slow down emotional intensity and take grounded steps. It supports growth through consistency rather than urgency.",
+    bestFor:
+      "Moments of anxiety, overwhelm, or internal pressure where you need a calmer pace and sustainable momentum.",
+    caution:
+      "If urgent action is required, pair this with a specific deadline so calm reflection does not become avoidance.",
+  },
+  {
+    value: "malaysia",
+    category: "cultural",
+    country: "Malaysia",
+    label: "Malaysian Balanced Reframe",
+    description: "Balances emotional validation with moderation and practical pacing.",
+    deepExplanation:
+      "This lens encourages a balanced view: acknowledging both your emotional burden and practical realities. It helps reduce extremes so you can respond with steadiness and perspective.",
+    bestFor:
+      "Situations where you feel pulled in multiple directions and need to prioritize without shutting down emotionally.",
+    caution:
+      "Do not use balance language to suppress valid pain. Let yourself feel first, then choose what to act on.",
+  },
+  {
+    value: "thailand",
+    category: "cultural",
+    country: "Thailand",
+    label: "Thai Gentle Reframe",
+    description: "Calm and kind reframing that lowers emotional heat before action.",
+    deepExplanation:
+      "This framework emphasizes composure and compassion, helping you de-escalate internal stress and respond with intention. It is designed to restore clarity without self-judgment.",
+    bestFor:
+      "Highly emotional conflicts, frustration spikes, or moments when reacting quickly may worsen the situation.",
+    caution:
+      "Use with a follow-up action plan so calmness still leads to progress, not passivity.",
+  },
+  {
+    value: "philippines",
+    category: "cultural",
+    country: "Philippines",
+    label: "Filipino Resilient Reframe",
+    description: "Warm and hopeful reframing that builds resilience and relational strength.",
+    deepExplanation:
+      "This lens combines emotional warmth with practical hope. It helps you recognize pain while still seeing your ability to recover and take meaningful steps with support.",
+    bestFor:
+      "Setbacks, confidence dips, or difficult periods where you need encouragement plus one actionable next move.",
+    caution:
+      "Avoid skipping hard feelings in the name of positivity. Hope works best when paired with honest emotional acknowledgement.",
+  },
+  {
+    value: "vietnam",
+    category: "cultural",
+    country: "Vietnam",
+    label: "Vietnamese Perseverance Reframe",
+    description: "Effort-focused reframing that turns pressure into disciplined forward motion.",
+    deepExplanation:
+      "This framework emphasizes endurance, practical effort, and steady advancement. It reframes struggle as evidence of courage and commitment, then points you to the next concrete step.",
+    bestFor:
+      "Long-term pressure, demanding goals, or moments when you feel discouraged by slow progress.",
+    caution:
+      "If you are close to burnout, include recovery steps. Persistence should not mean self-neglect.",
+  },
+  {
+    value: "brunei",
+    category: "cultural",
+    country: "Brunei",
+    label: "Bruneian Composed Reframe",
+    description: "Values-centered reframing that supports calm dignity and wise pacing.",
+    deepExplanation:
+      "This lens helps you respond with composure and respect for your own limits. It emphasizes doing what matters with focus, rather than carrying every burden at once.",
+    bestFor:
+      "Moments of uncertainty where you want clarity, self-respect, and measured decisions.",
+    caution:
+      "Composure is not emotional suppression. Make room for your feelings before narrowing to priorities.",
+  },
+  {
+    value: "cambodia",
+    category: "cultural",
+    country: "Cambodia",
+    label: "Cambodian Steady Reframe",
+    description: "Gentle rebuilding lens focused on stability, dignity, and small wins.",
+    deepExplanation:
+      "This framework supports gradual emotional and practical recovery. It helps you move from overwhelm to grounded progress through consistent, manageable actions.",
+    bestFor:
+      "Periods of emotional fatigue, instability, or rebuilding confidence after setbacks.",
+    caution:
+      "Keep steps realistic. Taking on too much at once can undo the stability you are rebuilding.",
+  },
+  {
+    value: "laos",
+    category: "cultural",
+    country: "Laos",
+    label: "Lao Grounded Reframe",
+    description: "Unhurried reframing that prioritizes emotional steadiness and simplicity.",
+    deepExplanation:
+      "This lens reduces overwhelm by focusing on calm, clear, low-friction next steps. It helps you regain footing through simplicity and consistent follow-through.",
+    bestFor:
+      "Mental clutter, decision fatigue, or stressful moments where slowing down improves judgment.",
+    caution:
+      "Use this lens with intention when time-sensitive decisions are needed; calm pacing should still include commitment.",
+  },
+  {
+    value: "myanmar",
+    category: "cultural",
+    country: "Myanmar",
+    label: "Myanmar Resilience Reframe",
+    description: "Compassionate-under-pressure reframing that preserves agency and strength.",
+    deepExplanation:
+      "This framework acknowledges heavy emotional strain while reinforcing courage, endurance, and self-compassion. It helps you identify one controllable action that restores agency.",
+    bestFor:
+      "High-stress uncertainty, moments of helplessness, or situations where regaining control is critical.",
+    caution:
+      "Do not confuse resilience with carrying everything alone. Ask for support when needed.",
+  },
+] as const satisfies readonly FrameworkDefinition[];
 
 const LIVE_REFRAME_DELAY_OPTIONS = [3, 5, 10] as const;
 type LiveReframeDelay = (typeof LIVE_REFRAME_DELAY_OPTIONS)[number] | "";
@@ -71,7 +217,8 @@ const DRAFT_KEY = "mindweave-journal-draft";
 const ENTRY_SUBTITLES_KEY = "mindweave-entry-subtitles";
 const MAX_ENTRY_WORDS = 100;
 
-type FrameworkValue = "cbt" | "iceberg" | "growth" | "";
+type FrameworkValue = FrameworkId | "";
+type PersistedFrameworkValue = Exclude<FrameworkValue, "">;
 
 type JournalChunk = {
   id: string;
@@ -107,6 +254,15 @@ export function HomePage() {
   const selectedFramework = useMemo(
     () => FRAMEWORKS.find((item) => item.value === framework),
     [framework]
+  );
+
+  const therapeuticFrameworks = useMemo(
+    () => FRAMEWORKS.filter((item) => item.category === "therapeutic"),
+    []
+  );
+  const culturalFrameworks = useMemo(
+    () => FRAMEWORKS.filter((item) => item.category === "cultural"),
+    []
   );
 
   const committedUserText = useMemo(
@@ -264,7 +420,7 @@ export function HomePage() {
       try {
         const preview = await previewReframe({
           text: draftSnapshot,
-          framework: framework as "cbt" | "iceberg" | "growth",
+          framework: framework as PersistedFrameworkValue,
         });
 
         if (requestId !== liveRequestId.current) return;
@@ -379,7 +535,7 @@ export function HomePage() {
     try {
       const preview = await previewReframe({
         text: trimmed,
-        framework: framework as "cbt" | "iceberg" | "growth",
+        framework: framework as PersistedFrameworkValue,
       });
 
       setChunks((previous) =>
@@ -828,7 +984,7 @@ export function HomePage() {
                   Choose the reframing lens for this entry
                 </h2>
                 <p className="mt-1 text-sm text-stone-600">
-                  Pick based on what you need now: clearer thinking, deeper emotional insight, or forward momentum.
+                  Choose from therapeutic frameworks or ASEAN cultural frameworks inspired by regional communication styles.
                 </p>
               </div>
               <button
@@ -840,46 +996,113 @@ export function HomePage() {
               </button>
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-3">
-              {FRAMEWORKS.map((fw) => {
-                const selected = framework === fw.value;
-                return (
-                  <article
-                    key={fw.value}
-                    className={`rounded-2xl border p-4 ${
-                      selected
-                        ? "border-emerald-400 bg-emerald-50/70 shadow-[0_14px_35px_-24px_rgba(22,163,74,0.55)]"
-                        : "border-amber-200/80 bg-white/80"
-                    }`}
-                  >
-                    <h3 className="text-lg font-semibold text-stone-800">{fw.label}</h3>
-                    <p className="mt-2 text-sm text-stone-600">{fw.description}</p>
+            <div className="space-y-6">
+              <section>
+                <h3 className="mb-1 text-sm font-semibold uppercase tracking-[0.12em] text-amber-800">
+                  Therapeutic frameworks
+                </h3>
+                <p className="mb-3 text-xs text-stone-600">
+                  Evidence-aligned thinking lenses for structure, emotional depth, and growth.
+                </p>
+                <div className="grid gap-4 lg:grid-cols-3">
+                  {therapeuticFrameworks.map((fw) => {
+                    const selected = framework === fw.value;
+                    return (
+                      <article
+                        key={fw.value}
+                        className={`rounded-2xl border p-4 ${
+                          selected
+                            ? "border-emerald-400 bg-emerald-50/70 shadow-[0_14px_35px_-24px_rgba(22,163,74,0.55)]"
+                            : "border-amber-200/80 bg-white/80"
+                        }`}
+                      >
+                        <h3 className="text-lg font-semibold text-stone-800">{fw.label}</h3>
+                        <p className="mt-2 text-sm text-stone-600">{fw.description}</p>
 
-                    <div className="mt-3 rounded-lg border border-amber-100 bg-amber-50/55 p-3">
-                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-amber-800">How it works</p>
-                      <p className="mt-1 text-sm text-stone-700">{fw.deepExplanation}</p>
-                    </div>
+                        <div className="mt-3 rounded-lg border border-amber-100 bg-amber-50/55 p-3">
+                          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-amber-800">How it works</p>
+                          <p className="mt-1 text-sm text-stone-700">{fw.deepExplanation}</p>
+                        </div>
 
-                    <div className="mt-3 rounded-lg border border-emerald-100 bg-emerald-50/60 p-3">
-                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-800">Best for</p>
-                      <p className="mt-1 text-sm text-stone-700">{fw.bestFor}</p>
-                    </div>
+                        <div className="mt-3 rounded-lg border border-emerald-100 bg-emerald-50/60 p-3">
+                          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-800">Best for</p>
+                          <p className="mt-1 text-sm text-stone-700">{fw.bestFor}</p>
+                        </div>
 
-                    <div className="mt-3 rounded-lg border border-rose-100 bg-rose-50/60 p-3">
-                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-rose-800">Use carefully when</p>
-                      <p className="mt-1 text-sm text-stone-700">{fw.caution}</p>
-                    </div>
+                        <div className="mt-3 rounded-lg border border-rose-100 bg-rose-50/60 p-3">
+                          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-rose-800">Use carefully when</p>
+                          <p className="mt-1 text-sm text-stone-700">{fw.caution}</p>
+                        </div>
 
-                    <Button
-                      type="button"
-                      onClick={() => chooseFramework(fw.value as FrameworkValue)}
-                      className="mt-4 h-10 w-full bg-emerald-700 text-emerald-50 hover:bg-emerald-800"
-                    >
-                      {selected ? "Selected" : "Use this framework"}
-                    </Button>
-                  </article>
-                );
-              })}
+                        <Button
+                          type="button"
+                          onClick={() => chooseFramework(fw.value as FrameworkValue)}
+                          className="mt-4 h-10 w-full bg-emerald-700 text-emerald-50 hover:bg-emerald-800"
+                        >
+                          {selected ? "Selected" : "Use this framework"}
+                        </Button>
+                      </article>
+                    );
+                  })}
+                </div>
+              </section>
+
+              <section>
+                <h3 className="mb-1 text-sm font-semibold uppercase tracking-[0.12em] text-indigo-800">
+                  Cultural frameworks (ASEAN)
+                </h3>
+                <p className="mb-3 text-xs text-stone-600">
+                  Region-inspired communication styles designed for resonance and belonging, while keeping language respectful and clear.
+                </p>
+                <div className="grid gap-4 lg:grid-cols-2">
+                  {culturalFrameworks.map((fw) => {
+                    const selected = framework === fw.value;
+                    return (
+                      <article
+                        key={fw.value}
+                        className={`rounded-2xl border p-4 ${
+                          selected
+                            ? "border-indigo-400 bg-indigo-50/70 shadow-[0_14px_35px_-24px_rgba(79,70,229,0.55)]"
+                            : "border-amber-200/80 bg-white/80"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <h3 className="text-lg font-semibold text-stone-800">{fw.label}</h3>
+                          {fw.country && (
+                            <span className="rounded-full border border-indigo-200 bg-indigo-100 px-2.5 py-0.5 text-[11px] font-medium text-indigo-800">
+                              {fw.country}
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-2 text-sm text-stone-600">{fw.description}</p>
+
+                        <div className="mt-3 rounded-lg border border-indigo-100 bg-indigo-50/55 p-3">
+                          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-indigo-800">How it works</p>
+                          <p className="mt-1 text-sm text-stone-700">{fw.deepExplanation}</p>
+                        </div>
+
+                        <div className="mt-3 rounded-lg border border-emerald-100 bg-emerald-50/60 p-3">
+                          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-800">Best for</p>
+                          <p className="mt-1 text-sm text-stone-700">{fw.bestFor}</p>
+                        </div>
+
+                        <div className="mt-3 rounded-lg border border-rose-100 bg-rose-50/60 p-3">
+                          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-rose-800">Use carefully when</p>
+                          <p className="mt-1 text-sm text-stone-700">{fw.caution}</p>
+                        </div>
+
+                        <Button
+                          type="button"
+                          onClick={() => chooseFramework(fw.value as FrameworkValue)}
+                          className="mt-4 h-10 w-full bg-indigo-700 text-indigo-50 hover:bg-indigo-800"
+                        >
+                          {selected ? "Selected" : "Use this framework"}
+                        </Button>
+                      </article>
+                    );
+                  })}
+                </div>
+              </section>
             </div>
           </div>
         </div>

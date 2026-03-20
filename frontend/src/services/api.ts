@@ -127,15 +127,30 @@ export interface EntryDetail {
   createdAt: string;
 }
 
+export type FrameworkId =
+  | "cbt"
+  | "iceberg"
+  | "growth"
+  | "singapore"
+  | "indonesia"
+  | "malaysia"
+  | "thailand"
+  | "philippines"
+  | "vietnam"
+  | "brunei"
+  | "cambodia"
+  | "laos"
+  | "myanmar";
+
 export interface CreateEntryRequest {
   text: string;
-  framework: "cbt" | "iceberg" | "growth";
+  framework: FrameworkId;
 }
 
 export interface ReframePreviewResponse {
   originalText: string;
   reframedText: string;
-  framework: "cbt" | "iceberg" | "growth";
+  framework: FrameworkId;
   source?: "ai";
 }
 

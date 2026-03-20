@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { jsPDF } from "jspdf";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -8,14 +10,18 @@ import {
   checkUsernameAvailabilityForUser,
   getEntry,
   getProfile,
+  listUserConsents,
   listEntries,
+  revokeConsent,
   sendEmailChangeOtp,
+  type AccessScope,
   type UserProfile,
+  type UserConsentRecord,
   updateUsername,
   verifyEmailChangeOtp,
 } from "@/services/api";
 import { useUser } from "@/context/UserContext";
-import { AlertCircle, Check, CheckCircle2, Loader2, Save, XCircle } from "lucide-react";
+import { AlertCircle, Check, CheckCircle2, Loader2, Save, ShieldCheck, XCircle } from "lucide-react";
 
 interface UserSettings {
   defaultFramework: "cbt" | "iceberg" | "growth" | "";
@@ -55,6 +61,14 @@ const ASK_EACH_TIME = "ask-each-time";
 
 type UsernameStatus = "idle" | "checking" | "available" | "taken" | "invalid";
 
+const accessScopeLabels: Record<AccessScope, string> = {
+  profileBasics: "Profile basics",
+  interestProfile: "Interest profile",
+  reflectionSummary: "Reflection summary",
+  selectedJournalExcerpts: "Selected excerpts",
+  fullJournalAccess: "Full journal access",
+};
+
 export function SettingsPage() {
   const { token, user, setSession } = useUser();
 
@@ -84,6 +98,9 @@ export function SettingsPage() {
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletingAllEntries, setDeletingAllEntries] = useState(false);
+  const [consents, setConsents] = useState<UserConsentRecord[]>([]);
+  const [consentsLoading, setConsentsLoading] = useState(true);
+  const [revokingConsentId, setRevokingConsentId] = useState<string | null>(null);
 
   const usernameChanged = useMemo(() => {
     return Boolean(profile) && usernameDraft.trim() !== (profile?.username || "");
@@ -128,6 +145,11 @@ export function SettingsPage() {
         setSettings(DEFAULT_SETTINGS);
       }
     }
+
+    listUserConsents()
+      .then((records) => setConsents(records))
+      .catch((err: Error) => setError((current) => current || err.message || "Failed to load shared access records"))
+      .finally(() => setConsentsLoading(false));
   }, []);
 
   useEffect(() => {
@@ -387,6 +409,31 @@ export function SettingsPage() {
       setError(err.message || "Failed to delete entries");
     } finally {
       setDeletingAllEntries(false);
+    }
+  }
+
+  async function handleRevokeConsent(consentId: string) {
+    setRevokingConsentId(consentId);
+    setError("");
+
+    try {
+      const result = await revokeConsent(consentId);
+      setConsents((current) =>
+        current.map((record) =>
+          record.id === consentId
+            ? {
+                ...record,
+                status: result.status,
+                revokedAt: result.revokedAt,
+              }
+            : record
+        )
+      );
+      setSaveSuccess(true);
+    } catch (err: any) {
+      setError(err.message || "Failed to revoke shared access");
+    } finally {
+      setRevokingConsentId(null);
     }
   }
 
@@ -778,6 +825,88 @@ export function SettingsPage() {
           <CardTitle className="text-lg text-stone-800">Privacy & Data</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="rounded-lg border border-sky-100 bg-sky-50/40 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h4 className="font-medium text-stone-900">Shared Access</h4>
+                <p className="mt-1 text-xs leading-5 text-stone-600">
+                  Manage every organiser or opportunity that currently has consent-based access to your MindWeave profile package.
+                </p>
+              </div>
+              <Link to="/opportunities">
+                <Button type="button" size="sm" variant="outline" className="border-sky-200 bg-white">
+                  Review opportunities
+                </Button>
+              </Link>
+            </div>
+
+            <div className="mt-4 space-y-3">
+              {consentsLoading ? (
+                <div className="flex items-center gap-2 text-sm text-stone-500">
+                  <Loader2 className="h-4 w-4 animate-spin" /> Loading shared access records...
+                </div>
+              ) : consents.length === 0 ? (
+                <p className="text-sm text-stone-500">No opportunity access has been granted yet.</p>
+              ) : (
+                consents.map((consent) => (
+                  <div key={consent.id} className="rounded-xl border border-sky-100 bg-white p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-stone-900">{consent.opportunity.title}</p>
+                          {consent.revokedAt ? (
+                            <Badge variant="outline" className="border-stone-200 bg-stone-50 text-stone-600">
+                              Revoked
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">
+                              <ShieldCheck className="mr-1 h-3 w-3" /> Active
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="mt-1 text-sm text-stone-600">{consent.organizerSnapshot}</p>
+                        <p className="mt-2 text-xs leading-5 text-stone-500">{consent.purposeSnapshot}</p>
+                      </div>
+
+                      {!consent.revokedAt && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleRevokeConsent(consent.id)}
+                          disabled={revokingConsentId === consent.id}
+                          className="border-rose-200 bg-white text-rose-700 hover:bg-rose-50"
+                        >
+                          {revokingConsentId === consent.id ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}
+                          Revoke access
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {consent.scopes.map((scope) => (
+                        <Badge key={scope} variant="outline" className="border-sky-200 bg-sky-50/50 text-stone-700">
+                          {accessScopeLabels[scope]}
+                        </Badge>
+                      ))}
+                    </div>
+
+                    <div className="mt-3 grid gap-2 text-xs text-stone-500 md:grid-cols-2">
+                      <p>Granted: {new Date(consent.grantedAt).toLocaleString()}</p>
+                      <p>
+                        {consent.revokedAt
+                          ? `Revoked: ${new Date(consent.revokedAt).toLocaleString()}`
+                          : consent.expiresAt
+                            ? `Expires: ${new Date(consent.expiresAt).toLocaleString()}`
+                            : "No expiry set"}
+                      </p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
           <Button type="button" variant="outline" size="sm" onClick={handleExportPdf} disabled={exportingPdf}>
             {exportingPdf ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}
             Export All Entries (PDF)

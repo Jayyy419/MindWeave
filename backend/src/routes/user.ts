@@ -307,4 +307,76 @@ router.post("/password", async (req: Request, res: Response): Promise<void> => {
   }
 });
 
+router.get("/consents", async (req: Request, res: Response): Promise<void> => {
+  const userId = (req as any).userId as string;
+
+  try {
+    const consents = await prisma.dataAccessConsent.findMany({
+      where: { userId },
+      orderBy: { updatedAt: "desc" },
+      include: {
+        opportunity: {
+          select: {
+            id: true,
+            slug: true,
+            title: true,
+            organizerName: true,
+            summary: true,
+          },
+        },
+      },
+    });
+
+    res.json(
+      consents.map((consent) => ({
+        id: consent.id,
+        status: consent.status,
+        scopes: JSON.parse(consent.scopes),
+        purposeSnapshot: consent.purposeSnapshot,
+        organizerSnapshot: consent.organizerSnapshot,
+        expiresAt: consent.expiresAt,
+        grantedAt: consent.grantedAt,
+        revokedAt: consent.revokedAt,
+        opportunity: consent.opportunity,
+      }))
+    );
+  } catch (error) {
+    console.error("Error listing consents:", error);
+    res.status(500).json({ error: "Failed to list consents" });
+  }
+});
+
+router.post("/consents/:id/revoke", async (req: Request, res: Response): Promise<void> => {
+  const userId = (req as any).userId as string;
+  const id = req.params.id as string;
+
+  try {
+    const consent = await prisma.dataAccessConsent.findFirst({
+      where: { id, userId },
+    });
+
+    if (!consent) {
+      res.status(404).json({ error: "Consent record not found" });
+      return;
+    }
+
+    const updated = await prisma.dataAccessConsent.update({
+      where: { id },
+      data: {
+        status: "revoked",
+        revokedAt: new Date(),
+      },
+    });
+
+    res.json({
+      id: updated.id,
+      status: updated.status,
+      revokedAt: updated.revokedAt,
+    });
+  } catch (error) {
+    console.error("Error revoking consent:", error);
+    res.status(500).json({ error: "Failed to revoke consent" });
+  }
+});
+
 export default router;

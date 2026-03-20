@@ -220,6 +220,66 @@ export interface ChatMessage {
   createdAt: string;
 }
 
+// ── Opportunity & Consent Types ──
+
+export type AccessScope =
+  | "profileBasics"
+  | "interestProfile"
+  | "reflectionSummary"
+  | "selectedJournalExcerpts"
+  | "fullJournalAccess";
+
+export interface OpportunityConsent {
+  id: string;
+  status: string;
+  scopes: AccessScope[];
+  grantedAt: string;
+  expiresAt: string | null;
+}
+
+export interface OpportunitySummary {
+  id: string;
+  slug: string;
+  title: string;
+  organizerName: string;
+  summary: string;
+  description: string;
+  benefits: string[];
+  resourceHighlights: string[];
+  requestedScopes: AccessScope[];
+  eligible: boolean;
+  matchedTags: string[];
+  minimumEntries: number;
+  minimumLevel: number;
+  consent: OpportunityConsent | null;
+}
+
+export interface OpportunityDetail extends OpportunitySummary {}
+
+export interface OpportunityAccessPreview {
+  opportunityId: string;
+  scopes: AccessScope[];
+  accessPackage: Record<string, unknown> | null;
+}
+
+export interface UserConsentRecord {
+  id: string;
+  status: string;
+  scopes: AccessScope[];
+  purposeSnapshot: string;
+  organizerSnapshot: string;
+  expiresAt: string | null;
+  grantedAt: string;
+  revokedAt: string | null;
+  opportunity: {
+    id: string;
+    slug: string;
+    title: string;
+    organizerName: string;
+    summary: string;
+  };
+}
+
 // ── API Functions ──
 
 /** Create a new journal entry with AI reframing */
@@ -435,4 +495,87 @@ export async function sendThinkTankMessage(id: string, content: string): Promise
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || "Failed to send message");
   }
+}
+
+export async function listOpportunities(): Promise<{
+  opportunities: OpportunitySummary[];
+  overview: {
+    entryCount: number;
+    level: number;
+    userTags: string[];
+  };
+}> {
+  const res = await fetch(`${API_BASE_URL}/opportunities`, { headers: headers() });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to fetch opportunities");
+  }
+  return res.json();
+}
+
+export async function getOpportunity(id: string): Promise<OpportunityDetail> {
+  const res = await fetch(`${API_BASE_URL}/opportunities/${encodeURIComponent(id)}`, {
+    headers: headers(),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to fetch opportunity");
+  }
+  return res.json();
+}
+
+export async function previewOpportunityAccess(
+  id: string,
+  scopes: AccessScope[]
+): Promise<OpportunityAccessPreview> {
+  const query = new URLSearchParams();
+  scopes.forEach((scope) => query.append("scope", scope));
+
+  const res = await fetch(
+    `${API_BASE_URL}/opportunities/${encodeURIComponent(id)}/access-preview?${query.toString()}`,
+    { headers: headers() }
+  );
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to generate access preview");
+  }
+  return res.json();
+}
+
+export async function grantOpportunityConsent(data: {
+  opportunityId: string;
+  scopes: AccessScope[];
+  expiresAt: string | null;
+}): Promise<OpportunityConsent> {
+  const res = await fetch(`${API_BASE_URL}/opportunities/${encodeURIComponent(data.opportunityId)}/consent`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify({ scopes: data.scopes, expiresAt: data.expiresAt }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to save consent");
+  }
+  return res.json();
+}
+
+export async function listUserConsents(): Promise<UserConsentRecord[]> {
+  const res = await fetch(`${API_BASE_URL}/user/consents`, { headers: headers() });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to fetch shared access records");
+  }
+  return res.json();
+}
+
+export async function revokeConsent(id: string): Promise<{ id: string; status: string; revokedAt: string | null }> {
+  const res = await fetch(`${API_BASE_URL}/user/consents/${encodeURIComponent(id)}/revoke`, {
+    method: "POST",
+    headers: headers(),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to revoke consent");
+  }
+  return res.json();
 }

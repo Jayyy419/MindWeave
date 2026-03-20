@@ -9,6 +9,8 @@ import { ProfilePage } from "@/pages/ProfilePage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { ThinkTanksPage } from "@/pages/ThinkTanksPage";
 import { ThinkTankDetailPage } from "@/pages/ThinkTankDetailPage";
+import { OpportunitiesPage } from "@/pages/OpportunitiesPage";
+import { OpportunityDetailPage } from "@/pages/OpportunityDetailPage";
 import { AuthPage } from "@/pages/AuthPage";
 import { ResetPasswordPage } from "@/pages/ResetPasswordPage";
 
@@ -40,6 +42,8 @@ function AppRoutes() {
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/thinktanks" element={<ThinkTanksPage />} />
         <Route path="/thinktanks/:id" element={<ThinkTankDetailPage />} />
+        <Route path="/opportunities" element={<OpportunitiesPage />} />
+        <Route path="/opportunities/:id" element={<OpportunityDetailPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

@@ -2,6 +2,37 @@
 
 This changelog captures the implementation history from the start of this project session through the most recent deployment.
 
+## 2026-03-20 — Dedicated Consent Flow and Opportunities
+
+### Opportunities and Competition Access
+- Added a new Opportunities product area with dedicated routes and navigation.
+- Seeded organiser-facing opportunity records for challenge, climate, and wellbeing pathways.
+- Surfaced opportunity cards based on journaling activity, recurring tags, and profile level.
+
+### Consent Flow
+- Implemented explicit consent grant flow for opportunities instead of automatic profile sharing.
+- Added selectable data scopes for organiser access:
+	- profile basics
+	- interest profile
+	- reflection summary
+	- selected journal excerpts
+	- optional full journal access
+- Added access duration selection and revocable consent records.
+- Added live access-package preview so users can inspect what would be shared before granting consent.
+
+### Settings and Privacy Controls
+- Added Shared Access management inside Settings.
+- Users can now review active and historical consent records and revoke access directly.
+
+### Backend and Data Model
+- Added `Opportunity` and `DataAccessConsent` Prisma models.
+- Added backend opportunity APIs for:
+	- listing surfaced opportunities
+	- viewing a single opportunity
+	- previewing consent-scoped access packages
+	- granting consent
+- Added user consent APIs for listing and revoking shared-access records.
+
 ## 2026-03-20 — Journal Replay, Faster Reframing, and Hidden Think Tanks
 
 ### Journal Writing Flow

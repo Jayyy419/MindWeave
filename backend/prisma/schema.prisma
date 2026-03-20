@@ -26,6 +26,7 @@ model User {
   memberships  Membership[]
   messages     Message[]
   resetTokens  PasswordResetToken[]
+  consents     DataAccessConsent[]
 }
 
 /// One-time password reset token sent via email
@@ -65,6 +66,47 @@ model ThinkTank {
   maxMembers  Int          @default(5)
   memberships Membership[]
   messages    Message[]
+}
+
+/// A competition, resource pathway, or organiser-led opportunity surfaced through MindWeave.
+model Opportunity {
+  id                 String              @id @default(cuid())
+  slug               String              @unique
+  title              String
+  organizerName      String
+  summary            String
+  description        String
+  benefits           String              @default("[]")
+  resourceHighlights String              @default("[]")
+  requestedScopes    String              @default("[]")
+  matchingTags       String              @default("[]")
+  minimumEntries     Int                 @default(3)
+  minimumLevel       Int                 @default(1)
+  isActive           Boolean             @default(true)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  consents           DataAccessConsent[]
+}
+
+/// A user's explicit consent to share a bounded profile package with an opportunity organiser.
+model DataAccessConsent {
+  id                String      @id @default(cuid())
+  userId            String
+  opportunityId     String
+  status            String      @default("granted")
+  scopes            String      @default("[]")
+  purposeSnapshot   String
+  organizerSnapshot String
+  expiresAt         DateTime?
+  grantedAt         DateTime    @default(now())
+  revokedAt         DateTime?
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  opportunity       Opportunity @relation(fields: [opportunityId], references: [id])
+  user              User        @relation(fields: [userId], references: [id])
+
+  @@unique([userId, opportunityId])
+  @@index([userId, status])
 }
 
 /// Links a user to a think tank they've joined

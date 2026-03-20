@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import entriesRouter from "./routes/entries";
 import userRouter from "./routes/user";
 import thinkTanksRouter from "./routes/thinktanks";
+import opportunitiesRouter from "./routes/opportunities";
 import authRouter from "./routes/auth";
 import { authMiddleware } from "./middleware/auth";
 
@@ -55,6 +56,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/entries", authMiddleware, entriesRouter);
 app.use("/api/user", authMiddleware, userRouter);
 app.use("/api/thinktanks", authMiddleware, thinkTanksRouter);
+app.use("/api/opportunities", authMiddleware, opportunitiesRouter);
 
 // Start server
 app.listen(PORT, () => {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,18 +9,16 @@ import {
   joinThinkTank,
   type ThinkTankPreview,
 } from "@/services/api";
-import { ArrowRight, CheckCircle, Loader2, Lock, Sparkles, Users, X } from "lucide-react";
+import { ArrowRight, CheckCircle, Loader2, Sparkles, Users } from "lucide-react";
 
 export function ThinkTanksPage() {
   const [allTanks, setAllTanks] = useState<ThinkTankPreview[]>([]);
-  const [availableTanks, setAvailableTanks] = useState<ThinkTankPreview[]>([]);
   const [unlockMessage, setUnlockMessage] = useState(
     "Continue using your journal consistently to reveal and unlock Think Tanks."
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [joiningId, setJoiningId] = useState<string | null>(null);
-  const [isHiddenTankModalOpen, setIsHiddenTankModalOpen] = useState(false);
 
   async function loadData() {
     try {
@@ -29,7 +27,6 @@ export function ThinkTanksPage() {
         listAvailableThinkTanks(),
       ]);
       setAllTanks(allData);
-      setAvailableTanks(availableData.available);
       setUnlockMessage(
         availableData.message ||
           "Keep journaling to unlock more Think Tanks and reveal better-fitting spaces."
@@ -57,13 +54,7 @@ export function ThinkTanksPage() {
     }
   }
 
-  const unlockedIds = useMemo(
-    () => new Set(availableTanks.map((tank) => tank.id)),
-    [availableTanks]
-  );
-
   const joinedTanks = allTanks.filter((tank) => tank.isJoined);
-  const hiddenTanks = allTanks.filter((tank) => !tank.isJoined);
 
   if (loading) {
     return (
@@ -84,17 +75,12 @@ export function ThinkTanksPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <div className="rounded-2xl border border-amber-200/80 bg-[linear-gradient(145deg,#fff9ee_0%,#fffef7_45%,#f8f8ef_100%)] p-5 shadow-[0_16px_44px_-30px_rgba(74,53,21,0.45)]">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <Users className="h-6 w-6 text-amber-700" />
-            <h1 className="text-2xl font-bold text-stone-800">Think Tanks</h1>
-          </div>
-          <Badge variant="outline" className="border-amber-300 bg-white/70 text-stone-700">
-            {allTanks.length} group{allTanks.length === 1 ? "" : "s"}
-          </Badge>
+        <div className="flex items-center gap-2">
+          <Users className="h-6 w-6 text-amber-700" />
+          <h1 className="text-2xl font-bold text-stone-800">Think Tanks</h1>
         </div>
         <p className="mt-3 text-sm leading-6 text-stone-600">
-          Think Tanks unlock over time through authentic reflection signals. Specific groups stay hidden until your journaling activity reveals a stronger fit.
+          Think Tanks are curated circles inside MindWeave where users with shared patterns, interests, and goals can be matched into higher-context opportunities. They stay locked until your journaling history is strong enough to signal a real fit.
         </p>
       </div>
 
@@ -112,6 +98,71 @@ export function ThinkTanksPage() {
           Write more entries, build your reflection profile, and hidden communities will reveal themselves automatically.
         </p>
       </div>
+
+      <section className="grid gap-4 lg:grid-cols-3">
+        <Card className="border-amber-200/80 bg-white/80 shadow-[0_12px_32px_-28px_rgba(74,53,21,0.25)]">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base text-stone-800">What Think Tanks are</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm leading-6 text-stone-700">
+            <p>
+              Think Tanks are not just chat groups. They are curated communities built from reflection patterns, lived interests, writing themes, and long-term intent that appear across your journal entries.
+            </p>
+            <p>
+              The goal is to place you in circles that feel genuinely aligned, so the people, conversations, resources, and opportunities inside each Think Tank are more relevant than a random interest tag match.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-amber-200/80 bg-white/80 shadow-[0_12px_32px_-28px_rgba(74,53,21,0.25)]">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base text-stone-800">How unlocking works</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm leading-6 text-stone-700">
+            <p>
+              Access is unlocked through consistent journaling, not by filling in a form or chasing visible requirements. MindWeave looks for repeated signals in your reflections over time before it reveals a fit.
+            </p>
+            <p>
+              This keeps the system harder to game and helps ensure that unlocked Think Tanks reflect who you actually are thinking, building, and growing into.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-amber-200/80 bg-white/80 shadow-[0_12px_32px_-28px_rgba(74,53,21,0.25)]">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base text-stone-800">Competitions and resources</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm leading-6 text-stone-700">
+            <p>
+              Some Think Tanks can become pathways to competitions, mentorship, learning resources, or outreach from organisers who want to support people with the right fit for a challenge or program.
+            </p>
+            <p>
+              If a user joins a connected competition or opportunity, organisers may request a MindWeave profile package to understand that participant better. That package should only be shared with clear user consent and can include relevant interests, reflection patterns, and selected journal context tied to the opportunity.
+            </p>
+          </CardContent>
+        </Card>
+      </section>
+
+      <Card className="border-amber-200/80 bg-[linear-gradient(145deg,#fffaf0_0%,#fffef8_55%,#f7f5ee_100%)] shadow-[0_16px_36px_-28px_rgba(74,53,21,0.3)]">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base text-stone-800">Important privacy note</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm leading-6 text-stone-700">
+          <p>
+            Unlocking a Think Tank does not automatically give organisers or third parties access to your private writing. Unlocking only reveals that you may be a fit for certain communities or opportunities.
+          </p>
+          <p>
+            Any deeper sharing of journal-derived signals, interests, or participant context should happen through an explicit opt-in step from the user, especially when linked to competitions, external organisers, or additional resources.
+          </p>
+          <div className="pt-2">
+            <Link to="/opportunities">
+              <Button size="sm" className="bg-indigo-700 text-indigo-50 hover:bg-indigo-800">
+                Review opportunities and consent requests
+              </Button>
+            </Link>
+          </div>
+        </CardContent>
+      </Card>
 
       {joinedTanks.length > 0 && (
         <section className="space-y-3">
@@ -133,62 +184,6 @@ export function ThinkTanksPage() {
             ))}
           </div>
         </section>
-      )}
-
-      {hiddenTanks.length > 0 && (
-        <section className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Lock className="h-4 w-4 text-stone-600" />
-            <h2 className="text-lg font-semibold text-stone-800">Sneak Peek</h2>
-            <Badge variant="outline" className="border-stone-300 bg-white/70 text-xs text-stone-700">
-              {hiddenTanks.length}
-            </Badge>
-          </div>
-          <div className="grid gap-4 lg:grid-cols-2">
-            {hiddenTanks.map((tank, index) => (
-              <LockedTankCard
-                key={tank.id}
-                tank={tank}
-                index={index}
-                isAvailable={unlockedIds.has(tank.id)}
-                onLockedClick={() => setIsHiddenTankModalOpen(true)}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
-      {isHiddenTankModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 px-4"
-          onClick={() => setIsHiddenTankModalOpen(false)}
-          role="presentation"
-        >
-          <div
-            className="w-full max-w-md rounded-2xl border border-amber-200 bg-[linear-gradient(160deg,#fff9ec_0%,#fffef7_45%,#f8f8ef_100%)] p-6 shadow-lg"
-            onClick={(event) => event.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-          >
-            <div className="mb-3 flex items-start justify-between">
-              <h3 className="text-lg font-semibold text-stone-800">This Think Tank Is Hidden</h3>
-              <button
-                type="button"
-                onClick={() => setIsHiddenTankModalOpen(false)}
-                className="inline-flex items-center rounded-md border border-amber-200 bg-white px-2 py-1 text-sm text-stone-600 hover:bg-amber-50"
-                aria-label="Close"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <p className="text-sm leading-6 text-stone-700">
-              This group is currently unavailable for your account. Unlock criteria are intentionally hidden to preserve authentic journaling behavior and fair access to future opportunities.
-            </p>
-            <p className="mt-3 text-xs text-stone-500">
-              Continue journaling normally. Eligible groups will unlock automatically.
-            </p>
-          </div>
-        </div>
       )}
     </div>
   );
@@ -255,54 +250,5 @@ function UnlockedTankCard({
         </CardContent>
       </Card>
     </Link>
-  );
-}
-
-function LockedTankCard({
-  tank,
-  index,
-  isAvailable,
-  onLockedClick,
-}: {
-  tank: ThinkTankPreview;
-  index: number;
-  isAvailable: boolean;
-  onLockedClick: () => void;
-}) {
-  const teaserLines = [
-    "A small circle matched to your reflection patterns.",
-    "Hidden until your journaling rhythm reveals a stronger fit.",
-    "Keep writing to surface the communities meant for you.",
-  ];
-
-  return (
-    <button type="button" onClick={onLockedClick} className="block w-full text-left">
-      <Card className="border-stone-200/90 bg-[repeating-linear-gradient(to_bottom,#faf9f4_0px,#faf9f4_30px,#e7e3d9_31px)] opacity-90 shadow-[0_12px_32px_-28px_rgba(70,70,70,0.45)] transition-all hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-26px_rgba(70,70,70,0.5)]">
-        <CardHeader className="pb-2 pt-4">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <CardTitle className="text-base text-stone-700">Hidden Think Tank {String(index + 1).padStart(2, "0")}</CardTitle>
-              <p className="mt-1 text-sm leading-6 text-stone-500">
-                {teaserLines[index % teaserLines.length]}
-              </p>
-            </div>
-            <span className="inline-flex items-center gap-1 rounded-md border border-stone-300 bg-white/80 px-2 py-1 text-xs text-stone-600">
-              <Lock className="h-3.5 w-3.5" />
-              {isAvailable ? "Still hidden" : "Locked"}
-            </span>
-          </div>
-        </CardHeader>
-        <CardContent className="pb-4">
-          <div className="flex flex-wrap gap-1.5">
-            <Badge variant="outline" className="border-stone-300 bg-white/70 text-xs text-stone-500">
-              Journaling unlock
-            </Badge>
-            <Badge variant="outline" className="border-stone-300 bg-white/70 text-xs text-stone-500">
-              Details concealed
-            </Badge>
-          </div>
-        </CardContent>
-      </Card>
-    </button>
   );
 }

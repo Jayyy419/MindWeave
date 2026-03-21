@@ -396,7 +396,13 @@ router.get("/dashboard", async (req: Request, res: Response): Promise<void> => {
     await ensureImpactTables();
 
     const entryCount = await prisma.entry.count({ where: { userId } });
-    const lessonCount = await prisma.learningLessonProgress.count({ where: { userId } }).catch(() => 0);
+    const lessonCountRows = (await prisma
+      .$queryRawUnsafe(
+        `SELECT COUNT(*)::INT AS "count" FROM "LearningLessonProgress" WHERE "userId" = $1`,
+        userId
+      )
+      .catch(() => [{ count: 0 }])) as Array<{ count: number }>;
+    const lessonCount = Number(lessonCountRows[0]?.count || 0);
 
     const surveyRows = (await prisma.$queryRawUnsafe(
       `SELECT "surveyType", "stressScore", "copingConfidenceScore", "helpSeekingConfidenceScore", "createdAt"

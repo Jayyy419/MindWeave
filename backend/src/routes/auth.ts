@@ -123,6 +123,7 @@ router.post("/register", async (req: Request, res: Response): Promise<void> => {
         id: user.id,
         email: user.email,
         username: user.username,
+        isAdmin: (user as any).isAdmin === true,
       },
     });
   } catch (error) {
@@ -163,6 +164,7 @@ router.post("/login", async (req: Request, res: Response): Promise<void> => {
         id: user.id,
         email: user.email,
         username: user.username,
+        isAdmin: (user as any).isAdmin === true,
       },
     });
   } catch (error) {

@@ -20,6 +20,7 @@ model User {
   level        Int          @default(1)
   badges       String       @default("[]") // JSON array of badge names
   tags         String       @default("[]") // JSON array of accumulated tags
+  isAdmin      Boolean      @default(false)
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
   entries      Entry[]

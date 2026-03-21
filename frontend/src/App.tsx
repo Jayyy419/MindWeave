@@ -1,3 +1,4 @@
+import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { UserProvider } from "@/context/UserContext";
 import { useUser } from "@/context/UserContext";
@@ -15,6 +16,12 @@ import { LearningLibraryPage } from "@/pages/LearningLibraryPage";
 import { ImpactHubPage } from "@/pages/ImpactHubPage";
 import { AuthPage } from "@/pages/AuthPage";
 import { ResetPasswordPage } from "@/pages/ResetPasswordPage";
+
+function AdminRoute({ children }: { children: React.ReactNode }) {
+  const { user } = useUser();
+  if (!user?.isAdmin) return <Navigate to="/" replace />;
+  return <>{children}</>;
+}
 
 function AppRoutes() {
   const { isAuthenticated } = useUser();
@@ -45,7 +52,7 @@ function AppRoutes() {
         <Route path="/thinktanks" element={<ThinkTanksPage />} />
         <Route path="/thinktanks/:id" element={<ThinkTankDetailPage />} />
         <Route path="/learning-library" element={<LearningLibraryPage />} />
-        <Route path="/impact-hub" element={<ImpactHubPage />} />
+        <Route path="/impact-hub" element={<AdminRoute><ImpactHubPage /></AdminRoute>} />
         <Route path="/opportunities" element={<OpportunitiesPage />} />
         <Route path="/opportunities/:id" element={<OpportunityDetailPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

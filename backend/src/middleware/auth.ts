@@ -35,6 +35,7 @@ export async function authMiddleware(
 
       (req as any).userId = user.id;
       (req as any).username = user.username || `User-${user.id.substring(0, 6)}`;
+      (req as any).isAdmin = Boolean((user as any).isAdmin);
       next();
       return;
     } catch {
@@ -65,5 +66,6 @@ export async function authMiddleware(
   // Attach the internal user ID to the request object
   (req as any).userId = user.id;
   (req as any).username = user.username || `User-${user.id.substring(0, 6)}`;
+  (req as any).isAdmin = Boolean((user as any).isAdmin);
   next();
 }

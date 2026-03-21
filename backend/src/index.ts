@@ -9,6 +9,10 @@ import learningRouter from "./routes/learning";
 import impactRouter from "./routes/impact";
 import authRouter from "./routes/auth";
 import { authMiddleware } from "./middleware/auth";
+import { adminMiddleware } from "./middleware/adminAuth";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
 
 // Load environment variables
 dotenv.config();
@@ -60,7 +64,12 @@ app.use("/api/user", authMiddleware, userRouter);
 app.use("/api/thinktanks", authMiddleware, thinkTanksRouter);
 app.use("/api/opportunities", authMiddleware, opportunitiesRouter);
 app.use("/api/learning", authMiddleware, learningRouter);
-app.use("/api/impact", authMiddleware, impactRouter);
+app.use("/api/impact", authMiddleware, adminMiddleware, impactRouter);
+
+// Ensure isAdmin column exists before starting (safe to run on every boot)
+prisma.$executeRawUnsafe(
+  `ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "isAdmin" BOOLEAN NOT NULL DEFAULT false`
+).catch((err) => console.error("isAdmin migration warning:", err));
 
 // Start server
 app.listen(PORT, () => {

@@ -19,6 +19,10 @@ export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
+  const visibleNavItems = navItems.filter(
+    (item) => item.to !== "/impact-hub" || user?.isAdmin === true
+  );
+
   const initials = useMemo(() => {
     if (!user?.username) return "MW";
     const pieces = user.username.trim().split(/\s+/).filter(Boolean);
@@ -63,7 +67,7 @@ export function Navbar() {
 
         {/* Navigation links */}
         <nav className="flex items-center space-x-1">
-          {navItems.map(({ to, label, icon: Icon }) => {
+          {visibleNavItems.map(({ to, label, icon: Icon }) => {
             const isActive =
               to === "/"
                 ? location.pathname === "/"

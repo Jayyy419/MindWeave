@@ -1,0 +1,322 @@
+----------------------------------------
+/var/log/eb-engine.log
+----------------------------------------
+2026/03/21 18:09:24.535688 [INFO] No hooks found in .platform/hooks/predeploy/, skipping
+2026/03/21 18:09:24.535691 [INFO] Executing instruction: stop X-Ray
+2026/03/21 18:09:24.535694 [INFO] stop X-Ray ...
+2026/03/21 18:09:24.535706 [INFO] Running command: systemctl show -p PartOf xray.service
+2026/03/21 18:09:24.550252 [WARN] stopProcess Warning: process xray is not registered 
+2026/03/21 18:09:24.550328 [INFO] Running command: systemctl stop xray.service
+2026/03/21 18:09:24.564717 [INFO] Executing instruction: stop proxy
+2026/03/21 18:09:24.564759 [INFO] Running command: systemctl show -p PartOf httpd.service
+2026/03/21 18:09:24.580679 [WARN] deregisterProcess Warning: process httpd is not registered, skipping...
+
+2026/03/21 18:09:24.580711 [INFO] Running command: systemctl show -p PartOf nginx.service
+2026/03/21 18:09:24.592813 [INFO] Running command: systemctl is-active nginx.service
+2026/03/21 18:09:24.600267 [INFO] Running command: systemctl show -p PartOf nginx.service
+2026/03/21 18:09:24.610038 [INFO] Running command: systemctl stop nginx.service
+2026/03/21 18:09:29.999251 [INFO] Running command: systemctl disable nginx.service
+2026/03/21 18:09:30.247958 [INFO] Running command: systemctl daemon-reload
+2026/03/21 18:09:30.496793 [INFO] Running command: systemctl reset-failed
+2026/03/21 18:09:30.505671 [INFO] Executing instruction: FlipApplication
+2026/03/21 18:09:30.505696 [INFO] Fetching environment variables...
+2026/03/21 18:09:30.505910 [INFO] Purge old process...
+2026/03/21 18:09:30.505930 [INFO] Running command: systemctl stop eb-app.target
+2026/03/21 18:09:30.516440 [INFO] Running command: systemctl show -p ConsistsOf eb-app.target | cut -d= -f2
+2026/03/21 18:09:30.612150 [INFO] web.service
+
+2026/03/21 18:09:30.612173 [INFO] deregistering process: web
+2026/03/21 18:09:30.612184 [INFO] Running command: systemctl show -p PartOf web.service
+2026/03/21 18:09:30.623230 [INFO] Running command: systemctl is-active web.service
+2026/03/21 18:09:30.630976 [INFO] Running command: systemctl disable web.service
+2026/03/21 18:09:30.938950 [INFO] Removed "/etc/systemd/system/multi-user.target.wants/web.service".
+
+2026/03/21 18:09:30.939060 [INFO] Running command: systemctl daemon-reload
+2026/03/21 18:09:31.194511 [INFO] Running command: systemctl reset-failed
+2026/03/21 18:09:31.295108 [INFO] Running command: systemctl is-active web.service
+2026/03/21 18:09:31.354108 [INFO] Process web has been fully terminated
+2026/03/21 18:09:31.354142 [INFO] All processes have been fully terminated
+2026/03/21 18:09:31.354146 [INFO] Removing /var/app/current/ if it exists
+2026/03/21 18:09:31.713465 [INFO] Renaming /var/app/staging/ to /var/app/current/
+2026/03/21 18:09:31.713523 [INFO] Register application processes...
+2026/03/21 18:09:31.713530 [INFO] Registering the proc: web
+
+2026/03/21 18:09:31.713539 [INFO] Running command: systemctl show -p PartOf web.service
+2026/03/21 18:09:31.736513 [INFO] Running command: systemctl daemon-reload
+2026/03/21 18:09:31.984556 [INFO] Running command: systemctl reset-failed
+2026/03/21 18:09:31.993674 [INFO] Running command: systemctl is-enabled eb-app.target
+2026/03/21 18:09:32.002080 [INFO] Running command: systemctl enable eb-app.target
+2026/03/21 18:09:32.243740 [INFO] Running command: systemctl start eb-app.target
+2026/03/21 18:09:32.253497 [INFO] Running command: systemctl enable web.service
+2026/03/21 18:09:32.496589 [INFO] Created symlink /etc/systemd/system/multi-user.target.wants/web.service → /etc/systemd/system/web.service.
+
+2026/03/21 18:09:32.496628 [INFO] Running command: systemctl show -p PartOf web.service
+2026/03/21 18:09:32.507504 [INFO] Running command: systemctl is-active web.service
+2026/03/21 18:09:32.514941 [INFO] Running command: systemctl start web.service
+2026/03/21 18:09:34.598109 [INFO] Executing instruction: start X-Ray
+2026/03/21 18:09:34.598117 [INFO] X-Ray is not enabled.
+2026/03/21 18:09:34.598119 [INFO] Executing instruction: start proxy with new configuration
+2026/03/21 18:09:34.598142 [INFO] Running command: /usr/sbin/nginx -t -c /var/proxy/staging/nginx/nginx.conf
+2026/03/21 18:09:34.633680 [INFO] nginx: [warn] could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+nginx: the configuration file /var/proxy/staging/nginx/nginx.conf syntax is ok
+nginx: configuration file /var/proxy/staging/nginx/nginx.conf test is successful
+
+2026/03/21 18:09:34.633987 [INFO] Running command: cp -rp /var/proxy/staging/nginx/* /etc/nginx
+2026/03/21 18:09:34.639407 [INFO] Running command: systemctl show -p PartOf nginx.service
+2026/03/21 18:09:34.657355 [INFO] Running command: systemctl daemon-reload
+2026/03/21 18:09:34.897202 [INFO] Running command: systemctl reset-failed
+2026/03/21 18:09:34.905784 [INFO] Running command: systemctl show -p PartOf nginx.service
+2026/03/21 18:09:34.919280 [INFO] Running command: systemctl is-active nginx.service
+2026/03/21 18:09:34.927764 [INFO] Running command: systemctl start nginx.service
+2026/03/21 18:09:35.058442 [INFO] Executing instruction: configureSqsd
+2026/03/21 18:09:35.058467 [INFO] This is a web server environment instance, skip configure sqsd daemon ...
+2026/03/21 18:09:35.058471 [INFO] Executing instruction: startSqsd
+2026/03/21 18:09:35.058474 [INFO] This is a web server environment instance, skip start sqsd daemon ...
+2026/03/21 18:09:35.058478 [INFO] Executing instruction: Track pids in healthd
+2026/03/21 18:09:35.058483 [INFO] This is an enhanced health env...
+2026/03/21 18:09:35.058497 [INFO] Running command: systemctl show -p ConsistsOf aws-eb.target | cut -d= -f2
+2026/03/21 18:09:35.069850 [INFO] cfn-hup.service nginx.service healthd.service
+
+2026/03/21 18:09:35.069886 [INFO] Running command: systemctl show -p ConsistsOf eb-app.target | cut -d= -f2
+2026/03/21 18:09:35.080036 [INFO] web.service
+
+2026/03/21 18:09:35.080282 [INFO] Executing instruction: RunAppDeployPostDeployHooks
+2026/03/21 18:09:35.080292 [INFO] No hooks found in .platform/hooks/postdeploy/, skipping
+2026/03/21 18:09:35.080295 [INFO] Executing cleanup logic
+2026/03/21 18:09:35.080391 [INFO] CommandService Response: {"status":"SUCCESS","api_version":"1.0","results":[{"status":"SUCCESS","msg":"Engine execution has succeeded.","returncode":0,"events":[{"msg":"Instance deployment completed successfully.","timestamp":1774116575080,"severity":"INFO"}]}]}
+
+2026/03/21 18:09:35.106898 [INFO] Platform Engine finished execution on command: app-deploy
+
+2026/03/21 18:09:53.372186 [INFO] Starting...
+2026/03/21 18:09:53.372234 [INFO] Starting EBPlatform-PlatformEngine
+2026/03/21 18:09:53.372284 [INFO] reading event message file
+2026/03/21 18:09:53.375660 [INFO] Engine received EB command cfn-hup-exec
+
+2026/03/21 18:09:53.554554 [INFO] Running command: /opt/aws/bin/cfn-get-metadata -s arn:aws:cloudformation:ap-southeast-1:140023398409:stack/awseb-e-m2xfh2kbrq-stack/40919060-2075-11f1-8a54-0a4737e5c789 -r AWSEBAutoScalingGroup --region ap-southeast-1
+2026/03/21 18:09:53.854061 [INFO] Running command: /opt/aws/bin/cfn-get-metadata -s arn:aws:cloudformation:ap-southeast-1:140023398409:stack/awseb-e-m2xfh2kbrq-stack/40919060-2075-11f1-8a54-0a4737e5c789 -r AWSEBBeanstalkMetadata --region ap-southeast-1
+2026/03/21 18:09:54.153132 [INFO] checking whether command tail-log is applicable to this instance...
+2026/03/21 18:09:54.153153 [INFO] this command is applicable to the instance, thus instance should execute command
+2026/03/21 18:09:54.153158 [INFO] Engine command: (tail-log)
+
+2026/03/21 18:09:54.154445 [INFO] Executing instruction: GetTailLogs
+2026/03/21 18:09:54.154452 [INFO] Tail Logs...
+2026/03/21 18:09:54.156910 [INFO] Running command: tail -n 100 /var/log/eb-engine.log
+
+
+----------------------------------------
+/var/log/nginx/access.log
+----------------------------------------
+172.31.4.215 - - [21/Mar/2026:17:06:31 +0000] "GET /lib/phpunit/Util/PHP/eval-stdin.php HTTP/1.1" 404 174 "-" "libredtail-http" "36.154.50.214"
+172.31.4.215 - - [21/Mar/2026:17:06:31 +0000] "GET /lib/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 193 "-" "libredtail-http" "36.154.50.214"
+172.31.4.215 - - [21/Mar/2026:17:06:32 +0000] "GET /laravel/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 197 "-" "libredtail-http" "36.154.50.214"
+172.31.4.215 - - [21/Mar/2026:17:06:32 +0000] "GET /www/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 193 "-" "libredtail-http" "36.154.50.214"
+172.31.4.215 - - [21/Mar/2026:17:06:32 +0000] "GET /ws/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 192 "-" "libredtail-http" "36.154.50.214"
+172.31.4.215 - - [21/Mar/2026:17:06:32 +0000] "GET /yii/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 193 "-" "libredtail-http" "36.154.50.214"
+172.31.4.215 - - [21/Mar/2026:17:06:32 +0000] "GET /zend/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 194 "-" "libredtail-http" "36.154.50.214"
+172.31.4.215 - - [21/Mar/2026:17:06:33 +0000] "GET /ws/ec/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 195 "-" "libredtail-http" "36.154.50.214"
+172.31.4.215 - - [21/Mar/2026:17:06:33 +0000] "GET /V2/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 192 "-" "libredtail-http" "36.154.50.214"
+172.31.4.215 - - [21/Mar/2026:17:06:33 +0000] "GET /tests/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 195 "-" "libredtail-http" "36.154.50.214"
+172.31.4.215 - - [21/Mar/2026:17:06:33 +0000] "GET /test/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 194 "-" "libredtail-http" "36.154.50.214"
+172.31.4.215 - - [21/Mar/2026:17:06:33 +0000] "GET /testing/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 197 "-" "libredtail-http" "36.154.50.214"
+172.31.4.215 - - [21/Mar/2026:17:06:34 +0000] "GET /api/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 193 "-" "libredtail-http" "36.154.50.214"
+172.31.4.215 - - [21/Mar/2026:17:06:34 +0000] "GET /demo/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 194 "-" "libredtail-http" "36.154.50.214"
+172.31.4.215 - - [21/Mar/2026:17:06:34 +0000] "GET /cms/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 193 "-" "libredtail-http" "36.154.50.214"
+172.31.4.215 - - [21/Mar/2026:17:06:34 +0000] "GET /crm/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 193 "-" "libredtail-http" "36.154.50.214"
+172.31.4.215 - - [21/Mar/2026:17:06:34 +0000] "GET /admin/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 195 "-" "libredtail-http" "36.154.50.214"
+172.31.4.215 - - [21/Mar/2026:17:06:34 +0000] "GET /backup/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 196 "-" "libredtail-http" "36.154.50.214"
+172.31.4.215 - - [21/Mar/2026:17:06:35 +0000] "GET /blog/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 194 "-" "libredtail-http" "36.154.50.214"
+172.31.4.215 - - [21/Mar/2026:17:06:35 +0000] "GET /workspace/drupal/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 206 "-" "libredtail-http" "36.154.50.214"
+172.31.4.215 - - [21/Mar/2026:17:06:35 +0000] "GET /panel/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 195 "-" "libredtail-http" "36.154.50.214"
+172.31.4.215 - - [21/Mar/2026:17:06:35 +0000] "GET /public/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 196 "-" "libredtail-http" "36.154.50.214"
+172.31.4.215 - - [21/Mar/2026:17:06:35 +0000] "GET /apps/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 194 "-" "libredtail-http" "36.154.50.214"
+172.31.4.215 - - [21/Mar/2026:17:06:36 +0000] "GET /app/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php HTTP/1.1" 404 193 "-" "libredtail-http" "36.154.50.214"
+172.31.4.215 - - [21/Mar/2026:17:06:36 +0000] "GET /index.php?s=/index/\x5Cthink\x5Capp/invokefunction&function=call_user_func_array&vars[0]=md5&vars[1][]=Hello HTTP/1.1" 404 148 "-" "libredtail-http" "36.154.50.214"
+172.31.4.215 - - [21/Mar/2026:17:06:36 +0000] "GET /public/index.php?s=/index/\x5Cthink\x5Capp/invokefunction&function=call_user_func_array&vars[0]=md5&vars[1][]=Hello HTTP/1.1" 404 155 "-" "libredtail-http" "36.154.50.214"
+172.31.4.215 - - [21/Mar/2026:17:06:36 +0000] "GET /index.php?lang=../../../../../../../../usr/local/lib/php/pearcmd&+config-create+/&/<?echo(md5(\x22hi\x22));?>+/tmp/index1.php HTTP/1.1" 404 148 "-" "libredtail-http" "36.154.50.214"
+172.31.4.215 - - [21/Mar/2026:17:06:36 +0000] "GET /index.php?lang=../../../../../../../../tmp/index1 HTTP/1.1" 404 148 "-" "libredtail-http" "36.154.50.214"
+172.31.4.215 - - [21/Mar/2026:17:06:36 +0000] "GET /containers/json HTTP/1.1" 404 154 "-" "libredtail-http" "36.154.50.214"
+172.31.4.215 - - [21/Mar/2026:17:11:05 +0000] "GET / HTTP/1.1" 200 28 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_7_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Safari/605.1.15" "8.163.29.205"
+172.31.41.94 - - [21/Mar/2026:17:12:11 +0000] "GET / HTTP/1.1" 200 28 "-" "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1" "170.106.152.218"
+172.31.4.215 - - [21/Mar/2026:17:15:06 +0000] "GET / HTTP/1.1" 200 28 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_7_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Safari/605.1.15" "8.130.165.94"
+172.31.4.215 - - [21/Mar/2026:17:17:26 +0000] "GET / HTTP/1.1" 200 28 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_7_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Safari/605.1.15" "8.163.29.205"
+172.31.4.215 - - [21/Mar/2026:17:18:19 +0000] "OPTIONS /api/learning/frameworks HTTP/1.1" 204 0 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.81"
+172.31.4.215 - - [21/Mar/2026:17:18:19 +0000] "GET /api/learning/frameworks HTTP/1.1" 200 752 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.81"
+172.31.41.94 - - [21/Mar/2026:17:18:19 +0000] "OPTIONS /api/learning/frameworks/cbt HTTP/1.1" 204 0 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.71"
+172.31.4.215 - - [21/Mar/2026:17:18:19 +0000] "GET /api/learning/frameworks/cbt HTTP/1.1" 200 27083 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.81"
+172.31.41.94 - - [21/Mar/2026:17:18:22 +0000] "OPTIONS /api/learning/frameworks/iceberg HTTP/1.1" 204 0 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.71"
+172.31.41.94 - - [21/Mar/2026:17:18:22 +0000] "GET /api/learning/frameworks/iceberg HTTP/1.1" 200 25793 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.71"
+172.31.4.215 - - [21/Mar/2026:17:18:22 +0000] "GET /api/learning/frameworks/cbt HTTP/1.1" 200 27083 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.81"
+172.31.41.94 - - [21/Mar/2026:17:18:23 +0000] "GET /api/learning/frameworks/iceberg HTTP/1.1" 200 25793 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.71"
+172.31.41.94 - - [21/Mar/2026:17:18:58 +0000] "OPTIONS /api/learning/frameworks HTTP/1.1" 204 0 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.71"
+172.31.41.94 - - [21/Mar/2026:17:18:58 +0000] "GET /api/learning/frameworks HTTP/1.1" 200 752 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.71"
+172.31.4.215 - - [21/Mar/2026:17:18:58 +0000] "OPTIONS /api/learning/frameworks/cbt HTTP/1.1" 204 0 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.81"
+172.31.41.94 - - [21/Mar/2026:17:18:58 +0000] "GET /api/learning/frameworks/cbt HTTP/1.1" 200 27083 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.71"
+172.31.41.94 - - [21/Mar/2026:17:18:59 +0000] "OPTIONS /api/learning/frameworks/iceberg HTTP/1.1" 204 0 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.71"
+172.31.4.215 - - [21/Mar/2026:17:18:59 +0000] "GET /api/learning/frameworks/iceberg HTTP/1.1" 200 25793 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.81"
+172.31.4.215 - - [21/Mar/2026:17:22:41 +0000] "POST /api/auth/register HTTP/1.1" 201 310 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.102"
+172.31.41.94 - - [21/Mar/2026:17:22:41 +0000] "GET /api/learning/frameworks HTTP/1.1" 200 751 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.71"
+172.31.4.215 - - [21/Mar/2026:17:22:41 +0000] "GET /api/learning/frameworks/cbt HTTP/1.1" 200 27062 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.81"
+172.31.4.215 - - [21/Mar/2026:17:24:03 +0000] "GET / HTTP/1.1" 200 28 "-" "Go-http-client/1.1" "80.78.19.187"
+172.31.41.94 - - [21/Mar/2026:17:24:04 +0000] "OPTIONS /api/learning/frameworks HTTP/1.1" 204 0 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.71"
+172.31.41.94 - - [21/Mar/2026:17:24:04 +0000] "GET /api/learning/frameworks HTTP/1.1" 200 752 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.71"
+172.31.4.215 - - [21/Mar/2026:17:24:04 +0000] "OPTIONS /api/learning/frameworks/cbt HTTP/1.1" 204 0 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.81"
+172.31.4.215 - - [21/Mar/2026:17:24:04 +0000] "GET /api/learning/frameworks/cbt HTTP/1.1" 200 27083 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.81"
+172.31.4.215 - - [21/Mar/2026:17:24:21 +0000] "OPTIONS /api/learning/frameworks HTTP/1.1" 204 0 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.81"
+172.31.4.215 - - [21/Mar/2026:17:24:21 +0000] "GET /api/learning/frameworks HTTP/1.1" 200 752 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.81"
+172.31.41.94 - - [21/Mar/2026:17:24:21 +0000] "OPTIONS /api/learning/frameworks/cbt HTTP/1.1" 204 0 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.71"
+172.31.4.215 - - [21/Mar/2026:17:24:21 +0000] "GET /api/learning/frameworks/cbt HTTP/1.1" 200 27083 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.81"
+172.31.41.94 - - [21/Mar/2026:17:25:34 +0000] "OPTIONS /api/learning/frameworks HTTP/1.1" 204 0 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.71"
+172.31.4.215 - - [21/Mar/2026:17:25:34 +0000] "GET /api/learning/frameworks HTTP/1.1" 200 752 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.81"
+172.31.41.94 - - [21/Mar/2026:17:25:34 +0000] "OPTIONS /api/learning/frameworks/cbt HTTP/1.1" 204 0 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.71"
+172.31.41.94 - - [21/Mar/2026:17:25:34 +0000] "GET /api/learning/frameworks/cbt HTTP/1.1" 200 27083 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.71"
+172.31.41.94 - - [21/Mar/2026:17:32:03 +0000] "OPTIONS /api/learning/frameworks HTTP/1.1" 204 0 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.71"
+172.31.41.94 - - [21/Mar/2026:17:32:03 +0000] "GET /api/learning/frameworks HTTP/1.1" 200 752 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.71"
+172.31.41.94 - - [21/Mar/2026:17:32:03 +0000] "OPTIONS /api/learning/frameworks/cbt HTTP/1.1" 204 0 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.71"
+172.31.41.94 - - [21/Mar/2026:17:32:03 +0000] "GET /api/learning/frameworks/cbt HTTP/1.1" 200 27083 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.71"
+172.31.4.215 - - [21/Mar/2026:17:32:05 +0000] "OPTIONS /api/learning/lessons/cbt-evidence-lab/complete HTTP/1.1" 204 0 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.81"
+172.31.41.94 - - [21/Mar/2026:17:32:05 +0000] "POST /api/learning/lessons/cbt-evidence-lab/complete HTTP/1.1" 201 131 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.107"
+172.31.41.94 - - [21/Mar/2026:17:32:05 +0000] "GET /api/learning/frameworks HTTP/1.1" 200 752 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.71"
+172.31.41.94 - - [21/Mar/2026:17:32:05 +0000] "GET /api/learning/frameworks/cbt HTTP/1.1" 200 27104 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.71"
+172.31.41.94 - - [21/Mar/2026:17:32:29 +0000] "OPTIONS /api/learning/frameworks HTTP/1.1" 204 0 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.71"
+172.31.4.215 - - [21/Mar/2026:17:32:29 +0000] "GET /api/learning/frameworks HTTP/1.1" 200 752 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.81"
+172.31.41.94 - - [21/Mar/2026:17:32:29 +0000] "OPTIONS /api/learning/frameworks/cbt HTTP/1.1" 204 0 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.71"
+172.31.41.94 - - [21/Mar/2026:17:32:29 +0000] "GET /api/learning/frameworks/cbt HTTP/1.1" 200 27104 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.71"
+172.31.4.215 - - [21/Mar/2026:17:32:46 +0000] "OPTIONS /api/thinktanks/available HTTP/1.1" 204 0 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.81"
+172.31.41.94 - - [21/Mar/2026:17:32:47 +0000] "OPTIONS /api/thinktanks HTTP/1.1" 204 0 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.71"
+172.31.4.215 - - [21/Mar/2026:17:32:47 +0000] "GET /api/thinktanks/available HTTP/1.1" 200 92 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.81"
+172.31.4.215 - - [21/Mar/2026:17:32:47 +0000] "GET /api/thinktanks HTTP/1.1" 200 1647 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.81"
+172.31.4.215 - - [21/Mar/2026:17:32:47 +0000] "OPTIONS /api/opportunities HTTP/1.1" 204 0 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.81"
+172.31.41.94 - - [21/Mar/2026:17:32:47 +0000] "GET /api/opportunities HTTP/1.1" 200 3115 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.71"
+172.31.4.215 - - [21/Mar/2026:17:32:50 +0000] "GET /api/thinktanks HTTP/1.1" 200 1647 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.81"
+172.31.4.215 - - [21/Mar/2026:17:32:50 +0000] "GET /api/thinktanks/available HTTP/1.1" 200 92 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.81"
+172.31.41.94 - - [21/Mar/2026:17:32:56 +0000] "OPTIONS /api/thinktanks HTTP/1.1" 204 0 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.71"
+172.31.41.94 - - [21/Mar/2026:17:32:56 +0000] "OPTIONS /api/thinktanks/available HTTP/1.1" 204 0 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.71"
+172.31.4.215 - - [21/Mar/2026:17:32:56 +0000] "GET /api/thinktanks/available HTTP/1.1" 200 92 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.81"
+172.31.4.215 - - [21/Mar/2026:17:32:56 +0000] "GET /api/thinktanks HTTP/1.1" 200 1647 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.81"
+172.31.4.215 - - [21/Mar/2026:17:43:47 +0000] "GET / HTTP/1.1" 200 28 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_7_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Safari/605.1.15" "111.37.200.192"
+172.31.4.215 - - [21/Mar/2026:17:44:57 +0000] "GET / HTTP/1.1" 200 28 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_7_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Safari/605.1.15" "8.130.165.94"
+172.31.4.215 - - [21/Mar/2026:17:45:55 +0000] "GET / HTTP/1.1" 200 28 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_7_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Safari/605.1.15" "111.37.200.192"
+172.31.4.215 - - [21/Mar/2026:17:50:47 +0000] "GET / HTTP/1.1" 200 28 "-" "-" "68.183.238.42"
+172.31.4.215 - - [21/Mar/2026:17:51:12 +0000] "GET / HTTP/1.1" 200 28 "-" "Mozilla/5.0 (iPhone; CPU iPhone OS 13_2_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/13.0.3 Mobile/15E148 Safari/604.1" "43.128.149.102"
+172.31.41.94 - - [21/Mar/2026:17:53:58 +0000] "GET /.env HTTP/1.1" 404 143 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.5845.140 Safari/537.36" "31.58.18.123"
+172.31.41.94 - - [21/Mar/2026:17:53:59 +0000] "POST / HTTP/1.1" 404 140 "-" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.5845.140 Safari/537.36" "31.58.18.123"
+172.31.4.215 - - [21/Mar/2026:17:55:30 +0000] "GET / HTTP/1.1" 200 28 "-" "Mozilla/5.0 (Macintosh; Intel Mac OS X 14_7_4) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.3 Safari/605.1.15" "8.163.29.205"
+172.31.4.215 - - [21/Mar/2026:17:57:15 +0000] "OPTIONS /api/user/consents HTTP/1.1" 204 0 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.81"
+172.31.4.215 - - [21/Mar/2026:17:57:15 +0000] "OPTIONS /api/user/profile HTTP/1.1" 204 0 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.81"
+172.31.41.94 - - [21/Mar/2026:17:57:15 +0000] "GET /api/user/profile HTTP/1.1" 200 394 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.71"
+172.31.4.215 - - [21/Mar/2026:17:57:15 +0000] "GET /api/user/consents HTTP/1.1" 200 2 "-" "Amazon CloudFront" "175.156.158.146, 130.176.187.81"
+172.31.41.94 - - [21/Mar/2026:18:03:02 +0000] "GET / HTTP/1.1" 499 0 "-" "Mozilla/5.0 (Android 14; Mobile; rv:128.0) Gecko/128.0 Firefox/128.0" "27.148.196.43"
+
+
+----------------------------------------
+/var/log/nginx/error.log
+----------------------------------------
+2026/03/21 15:30:36 [warn] 2243#2243: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/03/21 15:30:36 [warn] 2276#2276: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/03/21 15:30:36 [warn] 2277#2277: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/03/21 15:36:00 [warn] 3105#3105: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/03/21 15:36:01 [warn] 3138#3138: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/03/21 15:36:01 [warn] 3139#3139: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/03/21 16:19:59 [warn] 5271#5271: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/03/21 16:20:00 [warn] 5305#5305: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/03/21 16:20:00 [warn] 5306#5306: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/03/21 16:49:47 [warn] 6684#6684: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/03/21 16:49:48 [warn] 6717#6717: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/03/21 16:49:48 [warn] 6718#6718: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/03/21 16:58:19 [warn] 6721#6721: *137 using uninitialized "year" variable while logging request, client: 172.31.4.215, server: , request: "POST /cgi-bin/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/bin/sh HTTP/1.1"
+2026/03/21 16:58:19 [warn] 6721#6721: *137 using uninitialized "month" variable while logging request, client: 172.31.4.215, server: , request: "POST /cgi-bin/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/bin/sh HTTP/1.1"
+2026/03/21 16:58:19 [warn] 6721#6721: *137 using uninitialized "day" variable while logging request, client: 172.31.4.215, server: , request: "POST /cgi-bin/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/bin/sh HTTP/1.1"
+2026/03/21 16:58:19 [warn] 6721#6721: *137 using uninitialized "hour" variable while logging request, client: 172.31.4.215, server: , request: "POST /cgi-bin/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/bin/sh HTTP/1.1"
+2026/03/21 16:58:34 [warn] 6721#6721: *152 using uninitialized "year" variable while logging request, client: 172.31.4.215, server: , request: "POST /cgi-bin/%%32%65%%32%65/%%32%65%%32%65/%%32%65%%32%65/%%32%65%%32%65/%%32%65%%32%65/%%32%65%%32%65/%%32%65%%32%65/bin/sh HTTP/1.1"
+2026/03/21 16:58:34 [warn] 6721#6721: *152 using uninitialized "month" variable while logging request, client: 172.31.4.215, server: , request: "POST /cgi-bin/%%32%65%%32%65/%%32%65%%32%65/%%32%65%%32%65/%%32%65%%32%65/%%32%65%%32%65/%%32%65%%32%65/%%32%65%%32%65/bin/sh HTTP/1.1"
+2026/03/21 16:58:34 [warn] 6721#6721: *152 using uninitialized "day" variable while logging request, client: 172.31.4.215, server: , request: "POST /cgi-bin/%%32%65%%32%65/%%32%65%%32%65/%%32%65%%32%65/%%32%65%%32%65/%%32%65%%32%65/%%32%65%%32%65/%%32%65%%32%65/bin/sh HTTP/1.1"
+2026/03/21 16:58:34 [warn] 6721#6721: *152 using uninitialized "hour" variable while logging request, client: 172.31.4.215, server: , request: "POST /cgi-bin/%%32%65%%32%65/%%32%65%%32%65/%%32%65%%32%65/%%32%65%%32%65/%%32%65%%32%65/%%32%65%%32%65/%%32%65%%32%65/bin/sh HTTP/1.1"
+2026/03/21 17:06:58 [warn] 7650#7650: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/03/21 17:06:59 [warn] 7683#7683: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/03/21 17:06:59 [warn] 7684#7684: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/03/21 17:15:36 [warn] 8608#8608: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/03/21 17:15:36 [warn] 8641#8641: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/03/21 17:15:36 [warn] 8642#8642: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/03/21 17:59:15 [warn] 10760#10760: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/03/21 17:59:15 [warn] 10793#10793: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/03/21 17:59:15 [warn] 10794#10794: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/03/21 18:03:40 [warn] 11589#11589: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/03/21 18:03:40 [warn] 11622#11622: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/03/21 18:03:40 [warn] 11623#11623: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/03/21 18:09:34 [warn] 12362#12362: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/03/21 18:09:35 [warn] 12395#12395: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+2026/03/21 18:09:35 [warn] 12396#12396: could not build optimal types_hash, you should increase either types_hash_max_size: 1024 or types_hash_bucket_size: 64; ignoring types_hash_bucket_size
+
+
+----------------------------------------
+/var/log/web.stdout.log
+----------------------------------------
+Mar 21 15:30:34 ip-172-31-33-207 web[2216]: > mindweave-backend@1.0.0 start
+Mar 21 15:30:34 ip-172-31-33-207 web[2216]: > node dist/index.js
+Mar 21 15:30:34 ip-172-31-33-207 web[2230]: MindWeave backend running at http://localhost:3001
+Mar 21 15:35:59 ip-172-31-33-207 web[3075]: > mindweave-backend@1.0.0 start
+Mar 21 15:35:59 ip-172-31-33-207 web[3075]: > node dist/index.js
+Mar 21 15:35:59 ip-172-31-33-207 web[3089]: MindWeave backend running at http://localhost:3001
+Mar 21 16:14:09 ip-172-31-33-207 web[3089]: Error listing learning frameworks: PrismaClientKnownRequestError:
+Mar 21 16:14:09 ip-172-31-33-207 web[3089]: Invalid `prisma.learningLessonProgress.findMany()` invocation in
+Mar 21 16:14:09 ip-172-31-33-207 web[3089]: /var/app/current/dist/routes/learning.js:12:62
+Mar 21 16:14:09 ip-172-31-33-207 web[3089]:   9 router.get("/frameworks", async (req, res) => {
+Mar 21 16:14:09 ip-172-31-33-207 web[3089]:  10     const userId = req.userId;
+Mar 21 16:14:09 ip-172-31-33-207 web[3089]:  11     try {
+Mar 21 16:14:09 ip-172-31-33-207 web[3089]: → 12         const progress = await prisma.learningLessonProgress.findMany(
+Mar 21 16:14:09 ip-172-31-33-207 web[3089]: The table `public.LearningLessonProgress` does not exist in the current database.
+Mar 21 16:14:09 ip-172-31-33-207 web[3089]:    at ei.handleRequestError (/var/app/current/node_modules/@prisma/client/runtime/library.js:121:7268)
+Mar 21 16:14:09 ip-172-31-33-207 web[3089]:    at ei.handleAndLogRequestError (/var/app/current/node_modules/@prisma/client/runtime/library.js:121:6593)
+Mar 21 16:14:09 ip-172-31-33-207 web[3089]:    at ei.request (/var/app/current/node_modules/@prisma/client/runtime/library.js:121:6300)
+Mar 21 16:14:09 ip-172-31-33-207 web[3089]:    at async a (/var/app/current/node_modules/@prisma/client/runtime/library.js:130:9551)
+Mar 21 16:14:09 ip-172-31-33-207 web[3089]:    at async /var/app/current/dist/routes/learning.js:12:26 {
+Mar 21 16:14:09 ip-172-31-33-207 web[3089]:  code: 'P2021',
+Mar 21 16:14:09 ip-172-31-33-207 web[3089]:  meta: {
+Mar 21 16:14:09 ip-172-31-33-207 web[3089]:    modelName: 'LearningLessonProgress',
+Mar 21 16:14:09 ip-172-31-33-207 web[3089]:    table: 'public.LearningLessonProgress'
+Mar 21 16:14:09 ip-172-31-33-207 web[3089]:  },
+Mar 21 16:14:09 ip-172-31-33-207 web[3089]:  clientVersion: '6.19.2'
+Mar 21 16:14:09 ip-172-31-33-207 web[3089]: }
+Mar 21 16:16:42 ip-172-31-33-207 web[3089]: Error listing learning frameworks: PrismaClientKnownRequestError:
+Mar 21 16:16:42 ip-172-31-33-207 web[3089]: Invalid `prisma.learningLessonProgress.findMany()` invocation in
+Mar 21 16:16:42 ip-172-31-33-207 web[3089]: /var/app/current/dist/routes/learning.js:12:62
+Mar 21 16:16:42 ip-172-31-33-207 web[3089]:   9 router.get("/frameworks", async (req, res) => {
+Mar 21 16:16:42 ip-172-31-33-207 web[3089]:  10     const userId = req.userId;
+Mar 21 16:16:42 ip-172-31-33-207 web[3089]:  11     try {
+Mar 21 16:16:42 ip-172-31-33-207 web[3089]: → 12         const progress = await prisma.learningLessonProgress.findMany(
+Mar 21 16:16:42 ip-172-31-33-207 web[3089]: The table `public.LearningLessonProgress` does not exist in the current database.
+Mar 21 16:16:42 ip-172-31-33-207 web[3089]:    at ei.handleRequestError (/var/app/current/node_modules/@prisma/client/runtime/library.js:121:7268)
+Mar 21 16:16:42 ip-172-31-33-207 web[3089]:    at ei.handleAndLogRequestError (/var/app/current/node_modules/@prisma/client/runtime/library.js:121:6593)
+Mar 21 16:16:42 ip-172-31-33-207 web[3089]:    at ei.request (/var/app/current/node_modules/@prisma/client/runtime/library.js:121:6300)
+Mar 21 16:16:42 ip-172-31-33-207 web[3089]:    at async a (/var/app/current/node_modules/@prisma/client/runtime/library.js:130:9551)
+Mar 21 16:16:42 ip-172-31-33-207 web[3089]:    at async /var/app/current/dist/routes/learning.js:12:26 {
+Mar 21 16:16:42 ip-172-31-33-207 web[3089]:  code: 'P2021',
+Mar 21 16:16:42 ip-172-31-33-207 web[3089]:  meta: {
+Mar 21 16:16:42 ip-172-31-33-207 web[3089]:    modelName: 'LearningLessonProgress',
+Mar 21 16:16:42 ip-172-31-33-207 web[3089]:    table: 'public.LearningLessonProgress'
+Mar 21 16:16:42 ip-172-31-33-207 web[3089]:  },
+Mar 21 16:16:42 ip-172-31-33-207 web[3089]:  clientVersion: '6.19.2'
+Mar 21 16:16:42 ip-172-31-33-207 web[3089]: }
+Mar 21 16:19:57 ip-172-31-33-207 web[5241]: > mindweave-backend@1.0.0 start
+Mar 21 16:19:57 ip-172-31-33-207 web[5241]: > node dist/index.js
+Mar 21 16:19:58 ip-172-31-33-207 web[5255]: MindWeave backend running at http://localhost:3001
+Mar 21 16:49:46 ip-172-31-33-207 web[6654]: > mindweave-backend@1.0.0 start
+Mar 21 16:49:46 ip-172-31-33-207 web[6654]: > node dist/index.js
+Mar 21 16:49:46 ip-172-31-33-207 web[6668]: MindWeave backend running at http://localhost:3001
+Mar 21 17:06:57 ip-172-31-33-207 web[7620]: > mindweave-backend@1.0.0 start
+Mar 21 17:06:57 ip-172-31-33-207 web[7620]: > node dist/index.js
+Mar 21 17:06:57 ip-172-31-33-207 web[7634]: MindWeave backend running at http://localhost:3001
+Mar 21 17:15:34 ip-172-31-33-207 web[8578]: > mindweave-backend@1.0.0 start
+Mar 21 17:15:34 ip-172-31-33-207 web[8578]: > node dist/index.js
+Mar 21 17:15:35 ip-172-31-33-207 web[8592]: MindWeave backend running at http://localhost:3001
+Mar 21 17:59:13 ip-172-31-33-207 web[10730]: > mindweave-backend@1.0.0 start
+Mar 21 17:59:13 ip-172-31-33-207 web[10730]: > node dist/index.js
+Mar 21 17:59:14 ip-172-31-33-207 web[10744]: MindWeave backend running at http://localhost:3001
+Mar 21 18:03:38 ip-172-31-33-207 web[11559]: > mindweave-backend@1.0.0 start
+Mar 21 18:03:38 ip-172-31-33-207 web[11559]: > node dist/index.js
+Mar 21 18:03:39 ip-172-31-33-207 web[11573]: MindWeave backend running at http://localhost:3001
+Mar 21 18:09:32 ip-172-31-33-207 web[12332]: > mindweave-backend@1.0.0 start
+Mar 21 18:09:32 ip-172-31-33-207 web[12332]: > node dist/index.js
+Mar 21 18:09:33 ip-172-31-33-207 web[12346]: MindWeave backend running at http://localhost:3001
+
+

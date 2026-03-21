@@ -2,6 +2,47 @@
 
 This changelog captures the implementation history from the start of this project session through the most recent deployment.
 
+## 2026-03-22 — Impact Evidence, Safety Escalation, and Outreach Funnel
+
+### AI Explainability and Safety Escalation
+- Added explainability payloads to journaling reframe responses so users can see framework choice, cultural context usage, and processing steps.
+- Added high-risk language detection to journal preview/save flows.
+- Added a country-aware support resource directory and response payload for immediate escalation guidance.
+- Added new support endpoint:
+	- `GET /api/entries/support-resources?culturalFramework=<country>`
+
+### Follow-Up Outcomes and Impact Tracking
+- Added follow-up reminder computation for Day 7, Day 14, and Day 30 surveys.
+- Added impact endpoint for due follow-up items:
+	- `GET /api/impact/follow-up-reminders`
+- Expanded impact dashboard aggregation to include outreach funnel totals.
+
+### Learning Effectiveness Metrics
+- Added learning assessment event ingestion for lesson-level scoring and pass/fail tracking.
+- Added learning effectiveness analytics endpoint with score, pass rate, and outcome-correlation aggregates:
+	- `GET /api/impact/learning-effectiveness`
+
+### Outreach Campaign Funnel + Attribution
+- Extended outreach campaigns with QR token and referral code generation.
+- Added campaign share links (`qrUrl`, `referralUrl`) returned by campaign APIs.
+- Added funnel stage counters on campaigns:
+	- `funnelImpressions`
+	- `funnelScans`
+	- `funnelSignups`
+	- `funnelActiveUsers`
+	- `funnelCompletions`
+- Added funnel increment endpoint:
+	- `POST /api/impact/campaigns/:id/funnel`
+
+### Frontend Product Surfaces Updated
+- Learning Library now submits lesson assessment events on completion.
+- Home page now surfaces AI explainability details and high-risk escalation resources.
+- Impact Hub now shows follow-up reminders due, learning effectiveness metrics, and campaign funnel controls.
+
+### Deployment Notes
+- Frontend deployed to S3 and CloudFront invalidated (`I6SX4GGNT3HO74JMMB8F8ZHTCG`).
+- Backend application version `v20260322043808` created and submitted to Elastic Beanstalk rollout queue.
+
 ## 2026-03-21 — Cultural Overlay in Settings + Learning Library
 
 ### Cultural Framework Experience

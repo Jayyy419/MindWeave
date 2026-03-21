@@ -6,6 +6,7 @@ import {
   completeLesson,
   getLearningFramework,
   listLearningFrameworks,
+  submitLearningAssessment,
   type LearningCourseStep,
   type LearningFrameworkDetail,
   type LearningLesson,
@@ -175,7 +176,10 @@ export function LearningLibraryPage() {
     [frameworks]
   );
 
-  async function handleCompleteLesson(lessonId: string) {
+  async function handleCompleteLesson(
+    lessonId: string,
+    assessment?: { score: number; passed: boolean }
+  ) {
     if (!selectedFrameworkId) return;
 
     setCompletingLessonId(lessonId);
@@ -183,6 +187,14 @@ export function LearningLibraryPage() {
     setSuccess("");
 
     try {
+      if (assessment) {
+        await submitLearningAssessment(lessonId, {
+          source: "course-summary",
+          score: assessment.score,
+          passed: assessment.passed,
+        });
+      }
+
       await completeLesson(lessonId);
       const updatedFramework = await refreshLearningData(selectedFrameworkId);
       const updatedLesson = updatedFramework.lessons.find((lesson) => lesson.id === lessonId);
@@ -577,7 +589,12 @@ export function LearningLibraryPage() {
                   <div className="pt-1">
                     <Button
                       type="button"
-                      onClick={() => handleCompleteLesson(activeLesson.id)}
+                      onClick={() =>
+                        handleCompleteLesson(activeLesson.id, {
+                          score: Math.round((lessonEvaluation.quizScore + lessonEvaluation.gameScore) / 2),
+                          passed: lessonEvaluation.canComplete,
+                        })
+                      }
                       disabled={activeLesson.completed || !lessonEvaluation.canComplete || completingLessonId === activeLesson.id}
                       className="bg-emerald-700 text-white hover:bg-emerald-800"
                     >

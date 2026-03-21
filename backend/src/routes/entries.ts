@@ -20,6 +20,73 @@ type EntryChunk = {
   aiText: string;
 };
 
+type SafetyResource = {
+  label: string;
+  contact: string;
+  type: "hotline" | "ngo";
+};
+
+type SafetySignal = {
+  level: "none" | "high";
+  reasons: string[];
+  message: string | null;
+  supportCountry: string;
+  supportResources: SafetyResource[];
+};
+
+const SUPPORT_DIRECTORY: Record<string, SafetyResource[]> = {
+  singapore: [
+    { label: "Samaritans of Singapore", contact: "1767", type: "hotline" },
+    { label: "Institute of Mental Health Helpline", contact: "6389 2222", type: "hotline" },
+  ],
+  indonesia: [
+    { label: "SEJIWA", contact: "119 ext 8", type: "hotline" },
+    { label: "Into The Light Indonesia", contact: "intothelightid.org", type: "ngo" },
+  ],
+  malaysia: [
+    { label: "Befrienders KL", contact: "03-7627 2929", type: "hotline" },
+    { label: "Talian HEAL", contact: "15555", type: "hotline" },
+  ],
+  thailand: [
+    { label: "Thai Mental Health Hotline", contact: "1323", type: "hotline" },
+    { label: "Samaritans of Thailand", contact: "samaritansthai.com", type: "ngo" },
+  ],
+  philippines: [
+    { label: "NCMH Crisis Hotline", contact: "1553", type: "hotline" },
+    { label: "In Touch Community Services", contact: "+63 2 8893 7603", type: "hotline" },
+  ],
+  vietnam: [
+    { label: "Blue Dragon Childline", contact: "111", type: "hotline" },
+    { label: "CSAGA", contact: "csaga.org.vn", type: "ngo" },
+  ],
+  brunei: [
+    { label: "Talian Harapan 145", contact: "145", type: "hotline" },
+    { label: "Healthline", contact: "148", type: "hotline" },
+  ],
+  cambodia: [
+    { label: "TPO Cambodia", contact: "023 222 214", type: "ngo" },
+    { label: "Child Helpline", contact: "1280", type: "hotline" },
+  ],
+  laos: [
+    { label: "Lao Youth Union Support", contact: "1093", type: "hotline" },
+    { label: "WHO Laos Mental Health Directory", contact: "who.int/laos", type: "ngo" },
+  ],
+  myanmar: [
+    { label: "Myanmar Mental Health Support", contact: "mhmmyanmar.org", type: "ngo" },
+    { label: "Emergency Health Line", contact: "192", type: "hotline" },
+  ],
+  general: [
+    { label: "Emergency Services", contact: "Call local emergency number now", type: "hotline" },
+    { label: "FindAHelpline", contact: "findahelpline.com", type: "ngo" },
+  ],
+};
+
+const HIGH_RISK_PATTERNS: Array<{ reason: string; regex: RegExp }> = [
+  { reason: "self-harm mention", regex: /\b(kill myself|suicide|end my life|hurt myself|self harm)\b/i },
+  { reason: "hopelessness crisis", regex: /\b(no reason to live|can't go on|want to disappear)\b/i },
+  { reason: "immediate danger", regex: /\b(overdose|jump off|cut myself|die tonight)\b/i },
+];
+
 function parseCulturalToneStrength(value: unknown): CulturalToneStrength | undefined {
   if (typeof value !== "string") return undefined;
   return (VALID_CULTURAL_TONE_STRENGTHS as readonly string[]).includes(value)
@@ -31,6 +98,58 @@ function countWords(value: string): number {
   const trimmed = value.trim();
   if (!trimmed) return 0;
   return trimmed.split(/\s+/).length;
+}
+
+function getSupportResources(culturalFramework?: string): { supportCountry: string; supportResources: SafetyResource[] } {
+  if (culturalFramework && SUPPORT_DIRECTORY[culturalFramework]) {
+    return {
+      supportCountry: culturalFramework,
+      supportResources: SUPPORT_DIRECTORY[culturalFramework],
+    };
+  }
+
+  return {
+    supportCountry: "general",
+    supportResources: SUPPORT_DIRECTORY.general,
+  };
+}
+
+function detectSafetySignal(text: string, culturalFramework?: string): SafetySignal {
+  const reasons = HIGH_RISK_PATTERNS.filter((item) => item.regex.test(text)).map((item) => item.reason);
+  const { supportCountry, supportResources } = getSupportResources(culturalFramework);
+
+  if (reasons.length === 0) {
+    return {
+      level: "none",
+      reasons: [],
+      message: null,
+      supportCountry,
+      supportResources,
+    };
+  }
+
+  return {
+    level: "high",
+    reasons,
+    message:
+      "Your journal text may indicate urgent emotional risk. Please contact immediate support if you feel unsafe right now.",
+    supportCountry,
+    supportResources,
+  };
+}
+
+function buildExplainability(framework: string, culturalFramework?: string, culturalToneStrength?: CulturalToneStrength) {
+  return {
+    framework,
+    culturalFramework: culturalFramework || null,
+    culturalToneStrength: culturalFramework ? culturalToneStrength || "medium" : null,
+    steps: [
+      "Your entry is processed as reflection text (not as a command/task request).",
+      "MindWeave applies your selected framework prompt to generate a balanced reframe.",
+      "A second pass extracts keyword tags used for journaling insights and progression.",
+      "Safety scanning checks for high-risk language and surfaces country-relevant support resources.",
+    ],
+  };
 }
 
 function parseEntryChunks(value: unknown): EntryChunk[] {
@@ -128,6 +247,9 @@ router.post("/reframe-preview", async (req: Request, res: Response): Promise<voi
     return;
   }
 
+  const safety = detectSafetySignal(text, culturalFramework);
+  const explainability = buildExplainability(framework, culturalFramework, parsedToneStrength);
+
   try {
     const reframedText = await reframeText(text.trim(), framework, {
       allowFallback: false,
@@ -139,6 +261,8 @@ router.post("/reframe-preview", async (req: Request, res: Response): Promise<voi
       reframedText,
       framework,
       source: "ai",
+      explainability,
+      safety,
     });
   } catch (error) {
     if (error instanceof Error && error.message === "NOT_JOURNAL_ENTRY") {
@@ -148,6 +272,17 @@ router.post("/reframe-preview", async (req: Request, res: Response): Promise<voi
     console.error("Error generating reframe preview:", error);
     res.status(503).json({ error: "Live AI reframing is temporarily unavailable" });
   }
+});
+
+router.get("/support-resources", (req: Request, res: Response): void => {
+  const culturalFrameworkRaw = req.query.culturalFramework;
+  const culturalFrameworkValue = Array.isArray(culturalFrameworkRaw)
+    ? culturalFrameworkRaw[0]
+    : culturalFrameworkRaw;
+  const culturalFramework = typeof culturalFrameworkValue === "string" ? culturalFrameworkValue : undefined;
+
+  const { supportCountry, supportResources } = getSupportResources(culturalFramework);
+  res.json({ supportCountry, supportResources });
 });
 
 /**
@@ -222,6 +357,8 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
   }
 
   const parsedChunks = parseEntryChunks(chunks);
+  const safety = detectSafetySignal(text, culturalFramework);
+  const explainability = buildExplainability(framework, culturalFramework, parsedToneStrength);
 
   try {
     // Validate journal intent first, then extract tags in parallel.
@@ -259,6 +396,8 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
       chunks: getStoredChunks(entry.chunks, entry.originalText, entry.reframedText),
       tags,
       createdAt: entry.createdAt,
+      explainability,
+      safety,
     });
   } catch (error) {
     if (error instanceof Error && error.message === "NOT_JOURNAL_ENTRY") {

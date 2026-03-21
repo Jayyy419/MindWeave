@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { createHash, randomInt } from "crypto";
 import nodemailer from "nodemailer";
+import { adminMiddleware } from "../middleware/adminAuth";
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -88,6 +89,7 @@ router.get("/profile", async (req: Request, res: Response): Promise<void> => {
       id: user.id,
       email: user.email,
       username: user.username,
+      isAdmin: user.isAdmin,
       level: user.level,
       badges: JSON.parse(user.badges),
       tags: JSON.parse(user.tags),
@@ -159,7 +161,7 @@ router.post("/username", async (req: Request, res: Response): Promise<void> => {
     const user = await prisma.user.update({
       where: { id: userId },
       data: { username },
-      select: { id: true, email: true, username: true },
+      select: { id: true, email: true, username: true, isAdmin: true },
     });
 
     res.json({
@@ -246,7 +248,7 @@ router.post("/email-otp/verify", async (req: Request, res: Response): Promise<vo
     const user = await prisma.user.update({
       where: { id: userId },
       data: { email },
-      select: { id: true, email: true, username: true },
+      select: { id: true, email: true, username: true, isAdmin: true },
     });
     pendingEmailOtps.delete(userId);
     res.json({ message: "Email updated", user });
@@ -376,6 +378,130 @@ router.post("/consents/:id/revoke", async (req: Request, res: Response): Promise
   } catch (error) {
     console.error("Error revoking consent:", error);
     res.status(500).json({ error: "Failed to revoke consent" });
+  }
+});
+
+router.get("/admin/users", adminMiddleware, async (req: Request, res: Response): Promise<void> => {
+  const searchQuery = String(req.query.q || "").trim();
+
+  try {
+    const users = await prisma.user.findMany({
+      where: searchQuery
+        ? {
+            OR: [
+              { email: { contains: searchQuery, mode: "insensitive" } },
+              { username: { contains: searchQuery, mode: "insensitive" } },
+            ],
+          }
+        : undefined,
+      orderBy: [{ isAdmin: "desc" }, { createdAt: "desc" }],
+      take: 100,
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        isAdmin: true,
+        level: true,
+        createdAt: true,
+        _count: {
+          select: {
+            entries: true,
+          },
+        },
+      },
+    });
+
+    res.json({
+      users: users.map((user) => ({
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        isAdmin: user.isAdmin,
+        level: user.level,
+        entryCount: user._count.entries,
+        createdAt: user.createdAt,
+      })),
+    });
+  } catch (error) {
+    console.error("Error listing admin users:", error);
+    res.status(500).json({ error: "Failed to load users" });
+  }
+});
+
+router.patch("/admin/users/:id/admin", adminMiddleware, async (req: Request, res: Response): Promise<void> => {
+  const currentUserId = (req as any).userId as string;
+  const targetUserId = String(req.params.id);
+  const isAdmin = Boolean(req.body?.isAdmin);
+
+  try {
+    const targetUser = await prisma.user.findUnique({
+      where: { id: targetUserId },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        isAdmin: true,
+        level: true,
+        createdAt: true,
+        _count: {
+          select: {
+            entries: true,
+          },
+        },
+      },
+    });
+
+    if (!targetUser) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    if (currentUserId === targetUserId && !isAdmin) {
+      res.status(400).json({ error: "You cannot remove your own admin access" });
+      return;
+    }
+
+    if (targetUser.isAdmin && !isAdmin) {
+      const adminCount = await prisma.user.count({ where: { isAdmin: true } });
+      if (adminCount <= 1) {
+        res.status(400).json({ error: "At least one admin must remain" });
+        return;
+      }
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: targetUserId },
+      data: { isAdmin },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        isAdmin: true,
+        level: true,
+        createdAt: true,
+        _count: {
+          select: {
+            entries: true,
+          },
+        },
+      },
+    });
+
+    res.json({
+      message: isAdmin ? "Admin access granted" : "Admin access removed",
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        username: updatedUser.username,
+        isAdmin: updatedUser.isAdmin,
+        level: updatedUser.level,
+        entryCount: updatedUser._count.entries,
+        createdAt: updatedUser.createdAt,
+      },
+    });
+  } catch (error) {
+    console.error("Error updating admin role:", error);
+    res.status(500).json({ error: "Failed to update admin access" });
   }
 });
 

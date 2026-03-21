@@ -49,9 +49,24 @@ Show exactly how AI is integrated and why it improves outcomes.
 - Input -> AI process -> user output flow.
 - Responsible AI safeguards (risk detection, disclaimers, escalation resources).
 
+## Newly Implemented Proof Points (Use in proposal now)
+
+- AI explainability panel is live in journaling flow (framework used + plain-language processing steps).
+- Safety escalation layer is live and detects high-risk language patterns.
+- Country-specific support directory is live for all 10 ASEAN countries.
+- Follow-up reminders for Day 7, Day 14, and Day 30 are live in Impact Hub.
+- Learning effectiveness tracking is live (assessment attempts, average score, pass rate, outcome deltas).
+- Outreach campaign attribution is live (QR token, referral code, and funnel stage counters).
+
 ## Suggested Diagram
 
 - One architecture flow diagram: User Input -> AI Layer -> Safety Layer -> Output + Progress Tracking.
+
+## Suggested Diagram (Updated)
+
+- User Entry -> AI Reframe Engine -> Explainability Layer -> Safety Escalation + Support Directory -> Journal Save
+- Learning Module -> Assessment Event -> Learning Effectiveness Metrics
+- Outreach Campaign -> QR/Referral Attribution -> Funnel Analytics -> Impact Dashboard
 
 ## Page 3 - Feasibility and Viability
 
@@ -67,6 +82,13 @@ Convince judges this can operate in practice now, not just conceptually.
 - Key operational assumptions and risk controls.
 - Team capability and delivery plan.
 
+## Recommended "Already Functional" bullets
+
+- Live reframe preview and journal save now return explainability and safety payloads.
+- Impact Hub provides follow-up reminders and aggregate funnel metrics.
+- Campaign manager returns trackable QR/referral links per campaign.
+- Learning Library emits lesson assessment events used in effectiveness analytics.
+
 ## Suggested KPI Table
 
 - Signups
@@ -74,6 +96,12 @@ Convince judges this can operate in practice now, not just conceptually.
 - Lesson completion rate
 - Day-7 retention
 - User-reported coping confidence delta
+
+Add these rows:
+- Follow-up survey completion rate (Day 7/14/30)
+- Safety escalation resolution follow-through rate
+- Funnel conversion rates (impression -> scan -> signup -> active -> completion)
+- Learning pass rate and average assessment score
 
 ## Page 4 - Scalability, Sustainability, and Impact
 
@@ -116,6 +144,13 @@ Present a practical and measurable outreach plan.
 - Funnel and measurement approach.
 - KPI ownership and reporting cadence.
 
+## Measurement Instrumentation (Now Available)
+
+- Campaign-level QR URLs and referral URLs are auto-generated.
+- Funnel counters are trackable per campaign: impressions, scans, signups, active users, completions.
+- Manual touchpoint logging is supported for offline outreach events.
+- Dashboard rolls up campaign totals and progress against target reach.
+
 ## Outreach Math Example
 
 - 10 campus workshops x 50 participants = 500
@@ -145,6 +180,11 @@ Present a practical and measurable outreach plan.
 - One wireframe sheet
 - One impact dashboard screenshot
 - One outreach funnel chart
+
+Add these screenshots if available:
+- AI explainability + safety escalation card from journal page
+- Impact Hub follow-up reminders panel
+- Campaign card with QR/referral links and funnel counters
 
 ## Common Mistakes to Avoid
 

@@ -46,6 +46,9 @@ Visuals:
 Narration:
 "MindWeave uses AI to help users reframe negative thoughts into constructive actions. It also provides structured learning modules with guided reflection, quizzes, and decision exercises. AI is paired with safety checks and support guidance for responsible use."
 
+Updated narration option (aligned to current build):
+"When a user writes, MindWeave reframes their thoughts using a chosen mental model, then shows a plain-language explanation of how the response was generated. If high-risk language appears, the app immediately triggers a safety escalation card with country-specific support contacts across ASEAN."
+
 ## Scene 4 (1:40-2:15) - Public Good and Measurable Impact
 
 Visuals:
@@ -54,6 +57,9 @@ Visuals:
 
 Narration:
 "We measure impact through completion rates, retention, and user-reported improvement in coping confidence. Our pilot targets include [X] users, [Y]% lesson completion, and measurable positive changes over [Z] weeks."
+
+Updated narration option (aligned to current build):
+"Our Impact Hub now tracks follow-up outcomes at Day 7, Day 14, and Day 30, alongside learning effectiveness metrics like assessment pass rates and average scores. This gives us measurable evidence of both engagement and behavior change over time."
 
 ## Scene 5 (2:15-2:45) - Outreach Plan (1,000+)
 
@@ -64,6 +70,9 @@ Visuals:
 
 Narration:
 "Our outreach combines campus workshops, community partners, youth ambassadors, and digital campaigns to reach at least 1,000 community members. Every channel is measured through referral and participation tracking."
+
+Updated narration option (aligned to current build):
+"Each outreach campaign now includes a generated QR onboarding link and referral link, with a tracked funnel from impressions to scans, signups, active users, and completions. This makes our 1,000-reach plan not just ambitious, but auditable."
 
 ## Scene 6 (2:45-3:00) - Why MindWeave Is Inspiring
 
@@ -82,6 +91,11 @@ Narration:
 - Include subtitles for accessibility.
 - Use one consistent visual theme and color system.
 
+Add these proof visuals:
+- Home journal sidebar showing explainability and safety escalation cards
+- Impact Hub follow-up reminder and learning effectiveness tiles
+- Campaign card showing QR/referral links and funnel counters
+
 ## Rubric Mapping in the Video
 
 - Problem definition (10%): Scene 1
@@ -91,6 +105,13 @@ Narration:
 - Innovation (10%): Scenes 3 and 6
 - Sustainability (10%): Scenes 4 and 5
 - Outreach practicality/effectiveness (15% total outreach): Scene 5
+
+## Evidence Callouts to Overlay On-Screen
+
+- "Day 7/14/30 follow-up tracking live"
+- "ASEAN support directory integrated (10 countries)"
+- "Campaign attribution live: QR + referral + funnel"
+- "Learning effectiveness analytics live"
 
 ## Production Tips
 

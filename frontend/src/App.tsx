@@ -14,8 +14,10 @@ import { OpportunitiesPage } from "@/pages/OpportunitiesPage";
 import { OpportunityDetailPage } from "@/pages/OpportunityDetailPage";
 import { LearningLibraryPage } from "@/pages/LearningLibraryPage";
 import { ImpactHubPage } from "@/pages/ImpactHubPage";
+import { AdminUsersPage } from "@/pages/AdminUsersPage";
 import { AuthPage } from "@/pages/AuthPage";
 import { ResetPasswordPage } from "@/pages/ResetPasswordPage";
+import SurveyPage from "@/pages/SurveyPage";
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user } = useUser();
@@ -52,7 +54,9 @@ function AppRoutes() {
         <Route path="/thinktanks" element={<ThinkTanksPage />} />
         <Route path="/thinktanks/:id" element={<ThinkTankDetailPage />} />
         <Route path="/learning-library" element={<LearningLibraryPage />} />
+          <Route path="/surveys" element={<SurveyPage />} />
         <Route path="/impact-hub" element={<AdminRoute><ImpactHubPage /></AdminRoute>} />
+        <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
         <Route path="/opportunities" element={<OpportunitiesPage />} />
         <Route path="/opportunities/:id" element={<OpportunityDetailPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

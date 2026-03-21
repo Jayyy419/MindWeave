@@ -17,6 +17,8 @@ import {
   type CulturalFrameworkId,
   type CulturalToneStrength,
   type EntryChunk,
+  type ExplainabilityPayload,
+  type SafetySignal,
 } from "@/services/api";
 import { CalendarDays, Heart, Info, Loader2, Pencil, Trash2, X } from "lucide-react";
 
@@ -264,6 +266,8 @@ export function HomePage() {
   const [liveLoading, setLiveLoading] = useState(false);
   const [liveError, setLiveError] = useState("");
   const [liveCountdown, setLiveCountdown] = useState<number | null>(null);
+  const [lastExplainability, setLastExplainability] = useState<ExplainabilityPayload | null>(null);
+  const [lastSafetySignal, setLastSafetySignal] = useState<SafetySignal | null>(null);
   const [editingChunkId, setEditingChunkId] = useState<string | null>(null);
   const [editingUserText, setEditingUserText] = useState("");
   const [editLoading, setEditLoading] = useState(false);
@@ -578,6 +582,9 @@ export function HomePage() {
       if (requestId !== liveRequestId.current) return;
       if (text.trim() !== draftSnapshot) return;
 
+      setLastExplainability(preview.explainability ?? null);
+      setLastSafetySignal(preview.safety ?? null);
+
       setChunks((previous) => [
         ...previous,
         {
@@ -676,6 +683,9 @@ export function HomePage() {
         culturalToneStrength: preferredCulturalFramework ? preferredCulturalToneStrength : undefined,
       });
 
+      setLastExplainability(preview.explainability ?? null);
+      setLastSafetySignal(preview.safety ?? null);
+
       setChunks((previous) =>
         previous.map((chunk) =>
           chunk.id === chunkId
@@ -735,6 +745,8 @@ export function HomePage() {
         culturalToneStrength: preferredCulturalFramework ? preferredCulturalToneStrength : undefined,
         chunks: buildEntryChunksForSave(),
       });
+      setLastExplainability(createdEntry.explainability ?? null);
+      setLastSafetySignal(createdEntry.safety ?? null);
       if (checkInSummary) {
         const raw = localStorage.getItem(ENTRY_SUBTITLES_KEY);
         const existing = raw ? (JSON.parse(raw) as Record<string, string>) : {};
@@ -859,6 +871,39 @@ export function HomePage() {
                 {isConfigLocked ? "Options locked for this entry" : "Confirm options"}
               </Button>
             </div>
+
+            {lastExplainability ? (
+              <div className="rounded-2xl border border-sky-200/80 bg-sky-50/70 p-4">
+                <p className="flex items-center gap-2 text-sm font-medium text-sky-900">
+                  <Info className="h-4 w-4" /> AI Explainability
+                </p>
+                <p className="mt-2 text-xs text-sky-900/90">
+                  Framework: <span className="font-semibold">{lastExplainability.framework}</span>
+                </p>
+                <ul className="mt-2 space-y-1 text-xs text-sky-900/90">
+                  {lastExplainability.steps.map((step, index) => (
+                    <li key={`${step}-${index}`}>• {step}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+
+            {lastSafetySignal?.level === "high" ? (
+              <div className="rounded-2xl border border-red-200/80 bg-red-50/80 p-4">
+                <p className="text-sm font-semibold text-red-900">Safety escalation</p>
+                <p className="mt-1 text-xs text-red-900/90">{lastSafetySignal.message}</p>
+                <p className="mt-2 text-xs text-red-900/90">
+                  Country support: <span className="font-semibold capitalize">{lastSafetySignal.supportCountry}</span>
+                </p>
+                <ul className="mt-2 space-y-1 text-xs text-red-900/90">
+                  {lastSafetySignal.supportResources.map((resource) => (
+                    <li key={`${resource.label}-${resource.contact}`}>
+                      • {resource.label}: {resource.contact}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </aside>
 
           <form onSubmit={handleSubmit} className="space-y-4">

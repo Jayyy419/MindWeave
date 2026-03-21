@@ -135,6 +135,86 @@ A single chat message inside a think tank, posted either by a user or the AI bot
 
 ---
 
+## Runtime-Created Analytics Tables
+
+The current production backend also creates several tables with guarded `CREATE TABLE IF NOT EXISTS` SQL at runtime (inside route initializers). These are not yet represented as Prisma models but are active in production analytics flows.
+
+### `UserImpactProfile`
+
+Stores each user's selected beneficiary segment.
+
+| Column | Type | Notes |
+|---|---|---|
+| `userId` | `TEXT` PK/FK | References `User.id` |
+| `beneficiaryGroup` | `TEXT` | Default `university-students` |
+| `updatedAt` | `TIMESTAMP` | Last profile update time |
+
+### `UserOutcomeSurvey`
+
+Stores baseline and follow-up impact surveys.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `TEXT` PK | UUID |
+| `userId` | `TEXT` FK | References `User.id` |
+| `surveyType` | `TEXT` | `baseline` \| `day7` \| `day14` \| `day30` |
+| `stressScore` | `INTEGER` | 1-10 score |
+| `copingConfidenceScore` | `INTEGER` | 1-10 score |
+| `helpSeekingConfidenceScore` | `INTEGER` | 1-10 score |
+| `createdAt` | `TIMESTAMP` | Survey submission time |
+
+### `OutreachCampaign`
+
+Outreach tracking entity used by the Impact Hub.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `TEXT` PK | UUID |
+| `ownerUserId` | `TEXT` FK | References `User.id` |
+| `name` | `TEXT` | Campaign name |
+| `channel` | `TEXT` | Delivery channel |
+| `targetReach` | `INTEGER` | Campaign target |
+| `currentReach` | `INTEGER` | Running total from touchpoints |
+| `status` | `TEXT` | Default `active` |
+| `qrToken` | `TEXT` unique | Auto-generated QR attribution token |
+| `referralCode` | `TEXT` unique | Auto-generated referral code |
+| `funnelImpressions` | `INTEGER` | Funnel stage counter |
+| `funnelScans` | `INTEGER` | Funnel stage counter |
+| `funnelSignups` | `INTEGER` | Funnel stage counter |
+| `funnelActiveUsers` | `INTEGER` | Funnel stage counter |
+| `funnelCompletions` | `INTEGER` | Funnel stage counter |
+| `createdAt` | `TIMESTAMP` | Create timestamp |
+| `updatedAt` | `TIMESTAMP` | Last update timestamp |
+
+### `OutreachTouchpoint`
+
+Manual reach increments attached to campaigns.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `TEXT` PK | UUID |
+| `campaignId` | `TEXT` FK | References `OutreachCampaign.id` (cascade delete) |
+| `participantCount` | `INTEGER` | Count added to campaign reach |
+| `sourceNote` | `TEXT` | Manual source annotation |
+| `createdAt` | `TIMESTAMP` | Creation time |
+
+### `LearningAssessmentEvent`
+
+Learning performance event stream for lesson-level metrics.
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | `TEXT` PK | UUID |
+| `userId` | `TEXT` FK | References `User.id` |
+| `frameworkId` | `TEXT` | Learning framework identifier |
+| `lessonId` | `TEXT` | Lesson identifier |
+| `source` | `TEXT` | Event origin (for example `course`) |
+| `score` | `INTEGER` | 0-100 rounded score |
+| `passed` | `BOOLEAN` | Pass/fail marker |
+| `createdAt` | `TIMESTAMP` | Event creation time |
+
+---
+
 ## Seeded Think Tanks
 
 Six think tanks are created by `prisma/seed.ts` using `upsert` (safe to run multiple times):

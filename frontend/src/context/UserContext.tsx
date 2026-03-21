@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useMemo, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { getProfile } from "@/services/api";
 
 type AuthUser = {
   id: string;
@@ -33,6 +34,40 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       return null;
     }
   });
+
+  useEffect(() => {
+    if (!token || !user) {
+      return;
+    }
+
+    getProfile()
+      .then((profile) => {
+        const nextUser: AuthUser = {
+          id: profile.id,
+          email: profile.email,
+          username: profile.username,
+          isAdmin: profile.isAdmin,
+        };
+
+        setUser((current) => {
+          if (
+            current &&
+            current.id === nextUser.id &&
+            current.email === nextUser.email &&
+            current.username === nextUser.username &&
+            current.isAdmin === nextUser.isAdmin
+          ) {
+            return current;
+          }
+
+          localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
+          return nextUser;
+        });
+      })
+      .catch(() => {
+        // Ignore refresh failures and keep the existing session snapshot.
+      });
+  }, [token, user]);
 
   function setSession(nextToken: string, nextUser: AuthUser) {
     setToken(nextToken);

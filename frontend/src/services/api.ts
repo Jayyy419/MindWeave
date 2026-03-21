@@ -135,6 +135,8 @@ export interface EntryDetail {
   chunks: EntryChunk[];
   tags: string[];
   createdAt: string;
+  explainability?: ExplainabilityPayload;
+  safety?: SafetySignal;
 }
 
 export type TherapeuticFrameworkId = "cbt" | "iceberg" | "growth";
@@ -262,11 +264,34 @@ export interface LearningFrameworkDetail {
   lessons: LearningLesson[];
 }
 
+export interface SafetyResource {
+  label: string;
+  contact: string;
+  type: "hotline" | "ngo";
+}
+
+export interface SafetySignal {
+  level: "none" | "high";
+  reasons: string[];
+  message: string | null;
+  supportCountry: string;
+  supportResources: SafetyResource[];
+}
+
+export interface ExplainabilityPayload {
+  framework: FrameworkId;
+  culturalFramework: CulturalFrameworkId | null;
+  culturalToneStrength: CulturalToneStrength | null;
+  steps: string[];
+}
+
 export interface ReframePreviewResponse {
   originalText: string;
   reframedText: string;
   framework: FrameworkId;
   source?: "ai";
+  explainability?: ExplainabilityPayload;
+  safety?: SafetySignal;
 }
 
 export interface AseanEvidenceItem {
@@ -308,6 +333,15 @@ export interface OutreachCampaign {
   status: string;
   createdAt: string;
   updatedAt: string;
+  qrToken: string;
+  referralCode: string;
+  qrUrl: string;
+  referralUrl: string;
+  funnelImpressions: number;
+  funnelScans: number;
+  funnelSignups: number;
+  funnelActiveUsers: number;
+  funnelCompletions: number;
 }
 
 export interface ImpactDashboard {
@@ -324,7 +358,34 @@ export interface ImpactDashboard {
     copingDelta: number | null;
     helpSeekingDelta: number | null;
   };
+  funnel: {
+    impressions: number;
+    scans: number;
+    signups: number;
+    activeUsers: number;
+    completions: number;
+  };
   campaignProgressPercent: number;
+}
+
+export interface FollowUpRemindersResponse {
+  baselineCompleted: boolean;
+  baselineDate?: string;
+  due: Array<{
+    surveyType: "day7" | "day14" | "day30";
+    dueDate: string;
+  }>;
+}
+
+export interface LearningEffectivenessMetrics {
+  attempts: number;
+  averageScore: number;
+  passRatePercent: number;
+  pairedUsers: number;
+  stressDelta: number;
+  copingDelta: number;
+  helpSeekingDelta: number;
+  lessonCompletionSharePercent: number;
 }
 
 // ── Profile Types ──
@@ -333,9 +394,20 @@ export interface UserProfile {
   id: string;
   email: string;
   username: string;
+  isAdmin: boolean;
   level: number;
   badges: string[];
   tags: string[];
+  entryCount: number;
+  createdAt: string;
+}
+
+export interface AdminUserRecord {
+  id: string;
+  email: string | null;
+  username: string | null;
+  isAdmin: boolean;
+  level: number;
   entryCount: number;
   createdAt: string;
 }
@@ -531,7 +603,7 @@ export async function checkUsernameAvailabilityForUser(
 
 export async function updateUsername(
   username: string
-): Promise<{ message: string; user: { id: string; email: string; username: string } }> {
+): Promise<{ message: string; user: { id: string; email: string; username: string; isAdmin: boolean } }> {
   const res = await fetch(`${API_BASE_URL}/user/username`, {
     method: "POST",
     headers: headers(),
@@ -560,7 +632,7 @@ export async function sendEmailChangeOtp(email: string): Promise<{ message: stri
 export async function verifyEmailChangeOtp(data: {
   email: string;
   otp: string;
-}): Promise<{ message: string; user: { id: string; email: string; username: string } }> {
+}): Promise<{ message: string; user: { id: string; email: string; username: string; isAdmin: boolean } }> {
   const res = await fetch(`${API_BASE_URL}/user/email-otp/verify`, {
     method: "POST",
     headers: headers(),
@@ -586,6 +658,32 @@ export async function changePassword(data: {
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || "Failed to change password");
+  }
+  return res.json();
+}
+
+export async function listAdminUsers(query = ""): Promise<{ users: AdminUserRecord[] }> {
+  const suffix = query.trim() ? `?q=${encodeURIComponent(query.trim())}` : "";
+  const res = await fetch(`${API_BASE_URL}/user/admin/users${suffix}`, { headers: headers() });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to load users");
+  }
+  return res.json();
+}
+
+export async function updateAdminUserRole(
+  userId: string,
+  isAdmin: boolean
+): Promise<{ message: string; user: AdminUserRecord }> {
+  const res = await fetch(`${API_BASE_URL}/user/admin/users/${encodeURIComponent(userId)}/admin`, {
+    method: "PATCH",
+    headers: headers(),
+    body: JSON.stringify({ isAdmin }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to update admin access");
   }
   return res.json();
 }
@@ -773,6 +871,39 @@ export async function completeLesson(id: string): Promise<{
   return res.json();
 }
 
+export async function submitLearningAssessment(
+  lessonId: string,
+  data: { source: string; score: number; passed: boolean }
+): Promise<{ message: string }> {
+  const res = await fetch(`${API_BASE_URL}/learning/lessons/${encodeURIComponent(lessonId)}/assessment`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to submit learning assessment");
+  }
+  return res.json();
+}
+
+export async function listSupportResources(culturalFramework?: string): Promise<{
+  supportCountry: string;
+  supportResources: SafetyResource[];
+}> {
+  const suffix = culturalFramework
+    ? `?culturalFramework=${encodeURIComponent(culturalFramework)}`
+    : "";
+  const res = await fetch(`${API_BASE_URL}/entries/support-resources${suffix}`, {
+    headers: headers(),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to load support resources");
+  }
+  return res.json();
+}
+
 export async function listAseanEvidence(): Promise<{ evidence: AseanEvidenceItem[] }> {
   const res = await fetch(`${API_BASE_URL}/impact/asean-evidence`, { headers: headers() });
   if (!res.ok) {
@@ -873,6 +1004,40 @@ export async function addOutreachTouchpoint(
   return res.json();
 }
 
+export async function submitCampaignFunnelMetric(
+  campaignId: string,
+  data: { stage: "impressions" | "scans" | "signups" | "activeUsers" | "completions"; count: number }
+): Promise<{ message: string }> {
+  const res = await fetch(`${API_BASE_URL}/impact/campaigns/${encodeURIComponent(campaignId)}/funnel`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to update campaign funnel metric");
+  }
+  return res.json();
+}
+
+export async function getFollowUpReminders(): Promise<FollowUpRemindersResponse> {
+  const res = await fetch(`${API_BASE_URL}/impact/follow-up-reminders`, { headers: headers() });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to load follow-up reminders");
+  }
+  return res.json();
+}
+
+export async function getLearningEffectiveness(): Promise<LearningEffectivenessMetrics> {
+  const res = await fetch(`${API_BASE_URL}/impact/learning-effectiveness`, { headers: headers() });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to load learning effectiveness metrics");
+  }
+  return res.json();
+}
+
 export async function getImpactDashboard(): Promise<ImpactDashboard> {
   const res = await fetch(`${API_BASE_URL}/impact/dashboard`, { headers: headers() });
   if (!res.ok) {
@@ -881,3 +1046,82 @@ export async function getImpactDashboard(): Promise<ImpactDashboard> {
   }
   return res.json();
 }
+
+  // ── Survey Types ──
+
+  export interface Survey {
+    id: string;
+    title: string;
+    description: string;
+    type: string;
+    questions: Array<{
+      id: string;
+      text: string;
+      type: string;
+      scale?: { min: number; max: number; minLabel?: string; maxLabel?: string };
+    }>;
+    isActive: boolean;
+  }
+
+  export interface SurveyResponse {
+    id: string;
+    surveyId: string;
+    userId: string;
+    responses: Record<string, number | string>;
+    createdAt: string;
+    updatedAt: string;
+  }
+
+  // ── Survey API Functions ──
+
+  /** List all active surveys */
+  export async function listSurveys(): Promise<Survey[]> {
+    const res = await fetch(`${API_BASE_URL}/surveys`, { headers: headers() });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Failed to load surveys");
+    }
+    return res.json();
+  }
+
+  /** Get a specific survey by ID */
+  export async function getSurvey(id: string): Promise<Survey> {
+    const res = await fetch(`${API_BASE_URL}/surveys/${encodeURIComponent(id)}`, {
+      headers: headers(),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Failed to load survey");
+    }
+    return res.json();
+  }
+
+  /** Submit a survey response */
+  export async function submitSurveyResponse(
+    surveyId: string,
+    responses: Record<string, number | string>
+  ): Promise<SurveyResponse> {
+    const res = await fetch(`${API_BASE_URL}/surveys/${encodeURIComponent(surveyId)}/responses`, {
+      method: "POST",
+      headers: headers(),
+      body: JSON.stringify({ responses }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Failed to submit survey response");
+    }
+    return res.json();
+  }
+
+  /** Get user's response to a survey (if any) */
+  export async function getUserSurveyResponse(surveyId: string): Promise<SurveyResponse | null> {
+    const res = await fetch(`${API_BASE_URL}/surveys/${encodeURIComponent(surveyId)}/responses`, {
+      headers: headers(),
+    });
+    if (res.status === 404) return null;
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Failed to load survey response");
+    }
+    return res.json();
+  }

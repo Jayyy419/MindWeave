@@ -194,7 +194,31 @@ Create a new journal entry. The backend calls Gemini to produce a reframed versi
     }
   ],
   "tags": ["work-stress", "self-worth"],
-  "createdAt": "2026-03-15T12:00:00.000Z"
+  "createdAt": "2026-03-15T12:00:00.000Z",
+  "explainability": {
+    "framework": "cbt",
+    "culturalFramework": "singapore",
+    "culturalToneStrength": "medium",
+    "steps": [
+      "Your entry is processed as reflection text (not as a command/task request).",
+      "MindWeave applies your selected framework prompt to generate a balanced reframe.",
+      "A second pass extracts keyword tags used for journaling insights and progression.",
+      "Safety scanning checks for high-risk language and surfaces country-relevant support resources."
+    ]
+  },
+  "safety": {
+    "level": "none",
+    "reasons": [],
+    "message": null,
+    "supportCountry": "singapore",
+    "supportResources": [
+      {
+        "label": "Samaritans of Singapore",
+        "contact": "1767",
+        "type": "hotline"
+      }
+    ]
+  }
 }
 ```
 
@@ -226,7 +250,31 @@ Generate a live reframing preview without saving the entry.
   "originalText": "I keep making mistakes at work and I feel useless.",
   "reframedText": "Making mistakes at work does not define my worth; I can learn from this and improve step by step.",
   "framework": "cbt",
-  "source": "ai"
+  "source": "ai",
+  "explainability": {
+    "framework": "cbt",
+    "culturalFramework": "singapore",
+    "culturalToneStrength": "medium",
+    "steps": [
+      "Your entry is processed as reflection text (not as a command/task request).",
+      "MindWeave applies your selected framework prompt to generate a balanced reframe.",
+      "A second pass extracts keyword tags used for journaling insights and progression.",
+      "Safety scanning checks for high-risk language and surfaces country-relevant support resources."
+    ]
+  },
+  "safety": {
+    "level": "high",
+    "reasons": ["self-harm mention"],
+    "message": "Your journal text may indicate urgent emotional risk. Please contact immediate support if you feel unsafe right now.",
+    "supportCountry": "singapore",
+    "supportResources": [
+      {
+        "label": "Samaritans of Singapore",
+        "contact": "1767",
+        "type": "hotline"
+      }
+    ]
+  }
 }
 ```
 
@@ -237,6 +285,29 @@ Generate a live reframing preview without saving the entry.
 | `400` | Missing / empty text, invalid framework, invalid cultural tone strength |
 | `422` | Off-topic text that is not a journal-style personal reflection |
 | `503` | Live AI reframing temporarily unavailable |
+
+---
+
+### GET /api/entries/support-resources
+
+Return support resources for a requested country/cultural framework. If the value is missing or unknown, general resources are returned.
+
+**Query params**
+- `culturalFramework` (optional): one of the supported ASEAN cultural IDs
+
+**Response `200`**
+```json
+{
+  "supportCountry": "singapore",
+  "supportResources": [
+    {
+      "label": "Samaritans of Singapore",
+      "contact": "1767",
+      "type": "hotline"
+    }
+  ]
+}
+```
 
 ---
 
@@ -479,6 +550,108 @@ Returns the authenticated user's gamification stats.
   "createdAt": "2026-03-15T10:00:00.000Z"
 }
 ```
+
+---
+
+## Learning Library
+
+All routes require authentication.
+
+### GET /api/learning/frameworks
+
+List learning framework tracks and completion progress.
+
+### GET /api/learning/frameworks/:id
+
+Get framework details and lesson-level completion state.
+
+### POST /api/learning/lessons/:id/complete
+
+Mark a lesson as completed.
+
+### POST /api/learning/lessons/:id/assessment
+
+Record a lesson assessment event.
+
+**Request body**
+```json
+{
+  "source": "course",
+  "score": 82,
+  "passed": true
+}
+```
+
+**Response `201`**
+```json
+{
+  "message": "Assessment event recorded",
+  "lessonId": "cbt-thought-challenging-quiz",
+  "score": 82,
+  "passed": true
+}
+```
+
+---
+
+## Impact Hub
+
+All routes require authentication.
+
+### GET /api/impact/profile
+
+Get beneficiary profile with baseline and recent follow-up surveys.
+
+### PUT /api/impact/profile
+
+Update beneficiary group.
+
+### POST /api/impact/survey
+
+Submit one survey (`baseline`, `day7`, `day14`, or `day30`).
+
+### GET /api/impact/campaigns
+
+List outreach campaigns including QR/referral links and funnel counters.
+
+### POST /api/impact/campaigns
+
+Create a campaign with auto-generated `qrToken` and `referralCode`.
+
+### POST /api/impact/campaigns/:id/touchpoints
+
+Record manual outreach reach increments.
+
+### POST /api/impact/campaigns/:id/funnel
+
+Increment one funnel stage for a campaign.
+
+**Request body**
+```json
+{
+  "stage": "scans",
+  "count": 1
+}
+```
+
+**Allowed `stage` values**
+- `impressions`
+- `scans`
+- `signups`
+- `activeUsers`
+- `completions`
+
+### GET /api/impact/follow-up-reminders
+
+Return due Day 7/14/30 surveys for the current user.
+
+### GET /api/impact/learning-effectiveness
+
+Return aggregate learning assessment metrics and pre/post outcome deltas.
+
+### GET /api/impact/dashboard
+
+Return totals, survey deltas, outreach funnel aggregates, and campaign progress percent.
 
 ---
 

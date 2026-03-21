@@ -5,11 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   addOutreachTouchpoint,
   createOutreachCampaign,
+  getFollowUpReminders,
   getImpactDashboard,
   getImpactProfile,
+  getLearningEffectiveness,
   listAseanEvidence,
   listBeneficiaryGroups,
   listOutreachCampaigns,
+  submitCampaignFunnelMetric,
   submitOutcomeSurvey,
   updateBeneficiaryGroup,
   type BeneficiaryGroup,
@@ -48,7 +51,26 @@ export function ImpactHubPage() {
       copingDelta: number | null;
       helpSeekingDelta: number | null;
     };
+    funnel: {
+      impressions: number;
+      scans: number;
+      signups: number;
+      activeUsers: number;
+      completions: number;
+    };
     campaignProgressPercent: number;
+  } | null>(null);
+
+  const [followUpsDue, setFollowUpsDue] = useState<Array<{ surveyType: string; dueDate: string }>>([]);
+  const [learningEffectiveness, setLearningEffectiveness] = useState<{
+    attempts: number;
+    averageScore: number;
+    passRatePercent: number;
+    pairedUsers: number;
+    stressDelta: number;
+    copingDelta: number;
+    helpSeekingDelta: number;
+    lessonCompletionSharePercent: number;
   } | null>(null);
 
   const [surveyType, setSurveyType] = useState<"baseline" | "day7" | "day14" | "day30">("baseline");
@@ -67,12 +89,22 @@ export function ImpactHubPage() {
   const [touchpointForm, setTouchpointForm] = useState<Record<string, { participantCount: number; sourceNote: string }>>({});
 
   async function refreshAll() {
-    const [groupsResponse, profileResponse, evidenceResponse, campaignsResponse, dashboardResponse] = await Promise.all([
+    const [
+      groupsResponse,
+      profileResponse,
+      evidenceResponse,
+      campaignsResponse,
+      dashboardResponse,
+      followUpResponse,
+      learningEffectivenessResponse,
+    ] = await Promise.all([
       listBeneficiaryGroups(),
       getImpactProfile(),
       listAseanEvidence(),
       listOutreachCampaigns(),
       getImpactDashboard(),
+      getFollowUpReminders(),
+      getLearningEffectiveness(),
     ]);
 
     setBeneficiaryGroups(groupsResponse.groups);
@@ -80,6 +112,8 @@ export function ImpactHubPage() {
     setEvidence(evidenceResponse.evidence);
     setCampaigns(campaignsResponse.campaigns);
     setDashboard(dashboardResponse);
+    setFollowUpsDue(followUpResponse.due ?? []);
+    setLearningEffectiveness(learningEffectivenessResponse);
   }
 
   useEffect(() => {
@@ -147,6 +181,21 @@ export function ImpactHubPage() {
       setError(err.message || "Failed to add touchpoint");
     } finally {
       setSavingTouchpointId(null);
+    }
+  }
+
+  async function handleIncrementFunnel(
+    campaignId: string,
+    stage: "impressions" | "scans" | "signups" | "activeUsers" | "completions"
+  ) {
+    setError("");
+    setSuccess("");
+    try {
+      await submitCampaignFunnelMetric(campaignId, { stage, count: 1 });
+      await refreshAll();
+      setSuccess(`Funnel metric updated for ${stage}.`);
+    } catch (err: any) {
+      setError(err.message || "Failed to update funnel metric");
     }
   }
 
@@ -302,6 +351,28 @@ export function ImpactHubPage() {
               <p>Outreach target: {dashboard?.totals.targetReach ?? 0}</p>
               <p>Outreach reached: {dashboard?.totals.currentReach ?? 0}</p>
             </div>
+
+            <div className="rounded-xl border border-amber-100 bg-amber-50/40 p-3">
+              <p className="font-medium text-stone-900">Follow-up reminders</p>
+              {followUpsDue.length === 0 ? (
+                <p className="mt-1 text-xs text-stone-700">No follow-up surveys currently due.</p>
+              ) : (
+                followUpsDue.map((item) => (
+                  <p key={`${item.surveyType}-${item.dueDate}`} className="mt-1 text-xs text-stone-700">
+                    {item.surveyType.toUpperCase()} due since {new Date(item.dueDate).toLocaleDateString()}
+                  </p>
+                ))
+              )}
+            </div>
+
+            <div className="rounded-xl border border-amber-100 bg-amber-50/40 p-3">
+              <p className="font-medium text-stone-900">Learning effectiveness</p>
+              <p className="mt-1 text-xs text-stone-700">Attempts: {learningEffectiveness?.attempts ?? 0}</p>
+              <p className="text-xs text-stone-700">Avg score: {learningEffectiveness?.averageScore ?? 0}</p>
+              <p className="text-xs text-stone-700">Pass rate: {learningEffectiveness?.passRatePercent ?? 0}%</p>
+              <p className="text-xs text-stone-700">Paired users: {learningEffectiveness?.pairedUsers ?? 0}</p>
+            </div>
+
             <p className="text-xs text-stone-600">
               This dashboard is designed for proposal evidence and pilot viability reporting.
             </p>
@@ -351,6 +422,24 @@ export function ImpactHubPage() {
                   </Badge>
                 </div>
                 <p className="mt-1 text-sm text-stone-700">Channel: {campaign.channel}</p>
+                <p className="mt-1 break-all text-xs text-stone-600">QR link: {campaign.qrUrl}</p>
+                <p className="mt-1 break-all text-xs text-stone-600">Referral link: {campaign.referralUrl}</p>
+
+                <div className="mt-2 rounded-lg border border-sky-100 bg-white p-2 text-xs text-stone-700">
+                  <p>Impressions: {campaign.funnelImpressions}</p>
+                  <p>Scans: {campaign.funnelScans}</p>
+                  <p>Signups: {campaign.funnelSignups}</p>
+                  <p>Active users: {campaign.funnelActiveUsers}</p>
+                  <p>Completions: {campaign.funnelCompletions}</p>
+                </div>
+
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" onClick={() => handleIncrementFunnel(campaign.id, "impressions")}>+ Impression</Button>
+                  <Button size="sm" variant="outline" onClick={() => handleIncrementFunnel(campaign.id, "scans")}>+ Scan</Button>
+                  <Button size="sm" variant="outline" onClick={() => handleIncrementFunnel(campaign.id, "signups")}>+ Signup</Button>
+                  <Button size="sm" variant="outline" onClick={() => handleIncrementFunnel(campaign.id, "activeUsers")}>+ Active</Button>
+                  <Button size="sm" variant="outline" onClick={() => handleIncrementFunnel(campaign.id, "completions")}>+ Completion</Button>
+                </div>
 
                 <div className="mt-2 grid gap-2 md:grid-cols-[120px_1fr_auto]">
                   <input

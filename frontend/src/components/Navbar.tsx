@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { BookOpen, BookText, BriefcaseBusiness, ChevronDown, LineChart, PenLine, Settings, User, Users } from "lucide-react";
+import { BookOpen, BookText, BriefcaseBusiness, ChevronDown, LineChart, PenLine, Settings, Shield, User, Users, Compass } from "lucide-react";
 import { useUser } from "@/context/UserContext";
 import { Button } from "@/components/ui/button";
 
@@ -9,6 +9,7 @@ const navItems = [
   { to: "/memory-lane", label: "Memory Lane", icon: BookOpen },
   { to: "/thinktanks", label: "Think Tanks", icon: Users },
   { to: "/learning-library", label: "Learning Library", icon: BookText },
+    { to: "/surveys", label: "Surveys", icon: Compass },
   { to: "/impact-hub", label: "Impact Hub", icon: LineChart },
   { to: "/opportunities", label: "Opportunities", icon: BriefcaseBusiness },
 ];
@@ -122,6 +123,16 @@ export function Navbar() {
                   <Settings className="h-4 w-4" />
                   Settings
                 </Link>
+                {user?.isAdmin ? (
+                  <Link
+                    to="/admin/users"
+                    className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-foreground hover:bg-accent"
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    <Shield className="h-4 w-4" />
+                    User Management
+                  </Link>
+                ) : null}
               </div>
             )}
           </div>

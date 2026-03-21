@@ -111,6 +111,7 @@ export function AuthPage() {
         id: response.user.id,
         email: response.user.email,
         username: response.user.username,
+        isAdmin: response.user.isAdmin,
       });
     } catch (err: any) {
       setError(err.message || "Authentication failed");

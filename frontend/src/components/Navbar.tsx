@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { BookOpen, BookText, BriefcaseBusiness, ChevronDown, PenLine, Settings, User, Users } from "lucide-react";
+import { BookOpen, BookText, BriefcaseBusiness, ChevronDown, LineChart, PenLine, Settings, User, Users } from "lucide-react";
 import { useUser } from "@/context/UserContext";
 import { Button } from "@/components/ui/button";
 
@@ -9,6 +9,7 @@ const navItems = [
   { to: "/memory-lane", label: "Memory Lane", icon: BookOpen },
   { to: "/thinktanks", label: "Think Tanks", icon: Users },
   { to: "/learning-library", label: "Learning Library", icon: BookText },
+  { to: "/impact-hub", label: "Impact Hub", icon: LineChart },
   { to: "/opportunities", label: "Opportunities", icon: BriefcaseBusiness },
 ];
 

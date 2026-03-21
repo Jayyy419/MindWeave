@@ -6,6 +6,7 @@ import userRouter from "./routes/user";
 import thinkTanksRouter from "./routes/thinktanks";
 import opportunitiesRouter from "./routes/opportunities";
 import learningRouter from "./routes/learning";
+import impactRouter from "./routes/impact";
 import authRouter from "./routes/auth";
 import { authMiddleware } from "./middleware/auth";
 
@@ -59,6 +60,7 @@ app.use("/api/user", authMiddleware, userRouter);
 app.use("/api/thinktanks", authMiddleware, thinkTanksRouter);
 app.use("/api/opportunities", authMiddleware, opportunitiesRouter);
 app.use("/api/learning", authMiddleware, learningRouter);
+app.use("/api/impact", authMiddleware, impactRouter);
 
 // Start server
 app.listen(PORT, () => {

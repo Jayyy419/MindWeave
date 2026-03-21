@@ -268,6 +268,64 @@ export interface ReframePreviewResponse {
   source?: "ai";
 }
 
+export interface AseanEvidenceItem {
+  id: string;
+  title: string;
+  detail: string;
+  sourceLabel: string;
+}
+
+export type BeneficiaryGroup =
+  | "secondary-students"
+  | "polytechnic-students"
+  | "university-students"
+  | "early-career-youth"
+  | "community-youth";
+
+export interface OutcomeSurveyRecord {
+  id: string;
+  surveyType: "baseline" | "day7" | "day14" | "day30";
+  stressScore: number;
+  copingConfidenceScore: number;
+  helpSeekingConfidenceScore: number;
+  createdAt: string;
+}
+
+export interface ImpactProfileResponse {
+  beneficiaryGroup: BeneficiaryGroup;
+  updatedAt: string | null;
+  baselineSurvey: OutcomeSurveyRecord | null;
+  followUpSurveys: OutcomeSurveyRecord[];
+}
+
+export interface OutreachCampaign {
+  id: string;
+  name: string;
+  channel: string;
+  targetReach: number;
+  currentReach: number;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ImpactDashboard {
+  totals: {
+    entries: number;
+    completedLessons: number;
+    targetReach: number;
+    currentReach: number;
+  };
+  survey: {
+    baseline: OutcomeSurveyRecord | null;
+    latestFollowUp: OutcomeSurveyRecord | null;
+    stressDelta: number | null;
+    copingDelta: number | null;
+    helpSeekingDelta: number | null;
+  };
+  campaignProgressPercent: number;
+}
+
 // ── Profile Types ──
 
 export interface UserProfile {
@@ -710,6 +768,115 @@ export async function completeLesson(id: string): Promise<{
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || "Failed to complete lesson");
+  }
+  return res.json();
+}
+
+export async function listAseanEvidence(): Promise<{ evidence: AseanEvidenceItem[] }> {
+  const res = await fetch(`${API_BASE_URL}/impact/asean-evidence`, { headers: headers() });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to load ASEAN evidence");
+  }
+  return res.json();
+}
+
+export async function listBeneficiaryGroups(): Promise<{ groups: BeneficiaryGroup[] }> {
+  const res = await fetch(`${API_BASE_URL}/impact/beneficiary-groups`, { headers: headers() });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to load beneficiary groups");
+  }
+  return res.json();
+}
+
+export async function getImpactProfile(): Promise<ImpactProfileResponse> {
+  const res = await fetch(`${API_BASE_URL}/impact/profile`, { headers: headers() });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to load impact profile");
+  }
+  return res.json();
+}
+
+export async function updateBeneficiaryGroup(beneficiaryGroup: BeneficiaryGroup): Promise<{ message: string }> {
+  const res = await fetch(`${API_BASE_URL}/impact/profile`, {
+    method: "PUT",
+    headers: headers(),
+    body: JSON.stringify({ beneficiaryGroup }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to update beneficiary group");
+  }
+  return res.json();
+}
+
+export async function submitOutcomeSurvey(data: {
+  surveyType: "baseline" | "day7" | "day14" | "day30";
+  stressScore: number;
+  copingConfidenceScore: number;
+  helpSeekingConfidenceScore: number;
+}): Promise<{ message: string }> {
+  const res = await fetch(`${API_BASE_URL}/impact/survey`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to submit survey");
+  }
+  return res.json();
+}
+
+export async function listOutreachCampaigns(): Promise<{ campaigns: OutreachCampaign[] }> {
+  const res = await fetch(`${API_BASE_URL}/impact/campaigns`, { headers: headers() });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to load outreach campaigns");
+  }
+  return res.json();
+}
+
+export async function createOutreachCampaign(data: {
+  name: string;
+  channel: string;
+  targetReach: number;
+}): Promise<OutreachCampaign> {
+  const res = await fetch(`${API_BASE_URL}/impact/campaigns`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to create outreach campaign");
+  }
+  return res.json();
+}
+
+export async function addOutreachTouchpoint(
+  campaignId: string,
+  data: { participantCount: number; sourceNote: string }
+): Promise<{ message: string }> {
+  const res = await fetch(`${API_BASE_URL}/impact/campaigns/${encodeURIComponent(campaignId)}/touchpoints`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to add outreach touchpoint");
+  }
+  return res.json();
+}
+
+export async function getImpactDashboard(): Promise<ImpactDashboard> {
+  const res = await fetch(`${API_BASE_URL}/impact/dashboard`, { headers: headers() });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to load impact dashboard");
   }
   return res.json();
 }

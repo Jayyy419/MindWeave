@@ -188,13 +188,66 @@ export interface LearningFrameworkSummary {
   progressPercent: number;
 }
 
+export interface LearningReadingPage {
+  heading: string;
+  body: string[];
+}
+
+export interface LearningQuizQuestion {
+  id: string;
+  prompt: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+}
+
+export interface LearningGameRound {
+  id: string;
+  scenario: string;
+  options: string[];
+  correctIndex: number;
+  feedback: string;
+}
+
+export type LearningCourseStep =
+  | {
+      id: string;
+      type: "reading";
+      title: string;
+      pages: LearningReadingPage[];
+    }
+  | {
+      id: string;
+      type: "reflection";
+      title: string;
+      instructions: string;
+      prompts: string[];
+      minWords: number;
+    }
+  | {
+      id: string;
+      type: "quiz";
+      title: string;
+      passingScore: number;
+      questions: LearningQuizQuestion[];
+    }
+  | {
+      id: string;
+      type: "game";
+      title: string;
+      instructions: string;
+      passingScore: number;
+      rounds: LearningGameRound[];
+    };
+
 export interface LearningLesson {
   id: string;
   title: string;
   summary: string;
   durationMinutes: number;
-  difficulty: "beginner" | "intermediate";
+  difficulty: "beginner" | "intermediate" | "advanced";
   objectives: string[];
+  course: LearningCourseStep[];
   completed: boolean;
   completedAt: string | null;
 }

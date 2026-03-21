@@ -1,6 +1,39 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 
 const prisma = new PrismaClient();
+
+function isMissingLearningProgressTableError(error: unknown): boolean {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2021" &&
+    error.meta?.modelName === "LearningLessonProgress"
+  );
+}
+
+async function safeFindLessonProgress(userId: string): Promise<Array<{ frameworkId: string }>> {
+  try {
+    return await prisma.learningLessonProgress.findMany({
+      where: { userId },
+      select: { frameworkId: true },
+    });
+  } catch (error) {
+    if (isMissingLearningProgressTableError(error)) {
+      return [];
+    }
+    throw error;
+  }
+}
+
+async function safeCountLessonProgress(userId: string): Promise<number> {
+  try {
+    return await prisma.learningLessonProgress.count({ where: { userId } });
+  } catch (error) {
+    if (isMissingLearningProgressTableError(error)) {
+      return 0;
+    }
+    throw error;
+  }
+}
 
 /**
  * Calculate user level based on entry count.
@@ -62,10 +95,7 @@ export async function calculateBadges(userId: string): Promise<string[]> {
     badges.push("Deep Diver");
   }
 
-  const lessonProgress = await prisma.learningLessonProgress.findMany({
-    where: { userId },
-    select: { frameworkId: true },
-  });
+  const lessonProgress = await safeFindLessonProgress(userId);
 
   if (lessonProgress.length >= 1) {
     badges.push("Learning Explorer");
@@ -113,7 +143,7 @@ export async function updateUserGamification(
 
   // Count entries
   const entryCount = await prisma.entry.count({ where: { userId } });
-  const lessonCount = await prisma.learningLessonProgress.count({ where: { userId } });
+  const lessonCount = await safeCountLessonProgress(userId);
 
   // Calculate new level
   const level = calculateUnifiedLevel(entryCount, lessonCount);

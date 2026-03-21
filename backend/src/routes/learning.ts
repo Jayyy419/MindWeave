@@ -1,19 +1,80 @@
 import { Router, Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { LEARNING_LIBRARY, LEARNING_LESSON_MAP } from "../config/learningLibrary";
 import { updateUserGamification } from "../services/gamification";
 
 const router = Router();
 const prisma = new PrismaClient();
 
+let ensureLearningProgressTablePromise: Promise<void> | null = null;
+
+function isMissingLearningProgressTableError(error: unknown): boolean {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2021" &&
+    error.meta?.modelName === "LearningLessonProgress"
+  );
+}
+
+async function ensureLearningProgressTable(): Promise<void> {
+  if (!ensureLearningProgressTablePromise) {
+    ensureLearningProgressTablePromise = (async () => {
+      await prisma.$executeRawUnsafe(`
+        CREATE TABLE IF NOT EXISTS "LearningLessonProgress" (
+          "id" TEXT NOT NULL,
+          "userId" TEXT NOT NULL,
+          "frameworkId" TEXT NOT NULL,
+          "lessonId" TEXT NOT NULL,
+          "completedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "LearningLessonProgress_pkey" PRIMARY KEY ("id"),
+          CONSTRAINT "LearningLessonProgress_userId_fkey"
+            FOREIGN KEY ("userId") REFERENCES "User"("id")
+            ON DELETE RESTRICT
+            ON UPDATE CASCADE
+        )
+      `);
+
+      await prisma.$executeRawUnsafe(`
+        CREATE UNIQUE INDEX IF NOT EXISTS "LearningLessonProgress_userId_lessonId_key"
+        ON "LearningLessonProgress"("userId", "lessonId")
+      `);
+
+      await prisma.$executeRawUnsafe(`
+        CREATE INDEX IF NOT EXISTS "LearningLessonProgress_userId_frameworkId_idx"
+        ON "LearningLessonProgress"("userId", "frameworkId")
+      `);
+    })().catch((error) => {
+      ensureLearningProgressTablePromise = null;
+      throw error;
+    });
+  }
+
+  await ensureLearningProgressTablePromise;
+}
+
+async function withLearningProgressTable<T>(operation: () => Promise<T>): Promise<T> {
+  try {
+    return await operation();
+  } catch (error) {
+    if (!isMissingLearningProgressTableError(error)) {
+      throw error;
+    }
+
+    await ensureLearningProgressTable();
+    return operation();
+  }
+}
+
 router.get("/frameworks", async (req: Request, res: Response): Promise<void> => {
   const userId = (req as any).userId as string;
 
   try {
-    const progress = await prisma.learningLessonProgress.findMany({
-      where: { userId },
-      select: { frameworkId: true, lessonId: true, completedAt: true },
-    });
+    const progress = await withLearningProgressTable(() =>
+      prisma.learningLessonProgress.findMany({
+        where: { userId },
+        select: { frameworkId: true, lessonId: true, completedAt: true },
+      })
+    );
 
     const completedLessonIds = new Set(progress.map((item) => item.lessonId));
 
@@ -49,10 +110,12 @@ router.get("/frameworks/:id", async (req: Request, res: Response): Promise<void>
   }
 
   try {
-    const progress = await prisma.learningLessonProgress.findMany({
-      where: { userId, frameworkId },
-      select: { lessonId: true, completedAt: true },
-    });
+    const progress = await withLearningProgressTable(() =>
+      prisma.learningLessonProgress.findMany({
+        where: { userId, frameworkId },
+        select: { lessonId: true, completedAt: true },
+      })
+    );
 
     const completedMap = new Map(progress.map((item) => [item.lessonId, item.completedAt]));
 
@@ -87,22 +150,24 @@ router.post("/lessons/:id/complete", async (req: Request, res: Response): Promis
   }
 
   try {
-    const progress = await prisma.learningLessonProgress.upsert({
-      where: {
-        userId_lessonId: {
+    const progress = await withLearningProgressTable(() =>
+      prisma.learningLessonProgress.upsert({
+        where: {
+          userId_lessonId: {
+            userId,
+            lessonId,
+          },
+        },
+        update: {
+          completedAt: new Date(),
+        },
+        create: {
           userId,
           lessonId,
+          frameworkId: lessonMeta.frameworkId,
         },
-      },
-      update: {
-        completedAt: new Date(),
-      },
-      create: {
-        userId,
-        lessonId,
-        frameworkId: lessonMeta.frameworkId,
-      },
-    });
+      })
+    );
 
     await updateUserGamification(userId, []);
 

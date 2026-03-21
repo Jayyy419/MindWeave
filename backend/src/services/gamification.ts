@@ -11,6 +11,11 @@ export function calculateLevel(entryCount: number): number {
   return Math.floor(entryCount / 5) + 1;
 }
 
+function calculateUnifiedLevel(entryCount: number, lessonCount: number): number {
+  // Treat each lesson completion like one extra growth action.
+  return Math.floor((entryCount + lessonCount) / 5) + 1;
+}
+
 /**
  * Determine which badges the user has earned.
  * Returns an array of badge name strings.
@@ -57,6 +62,30 @@ export async function calculateBadges(userId: string): Promise<string[]> {
     badges.push("Deep Diver");
   }
 
+  const lessonProgress = await prisma.learningLessonProgress.findMany({
+    where: { userId },
+    select: { frameworkId: true },
+  });
+
+  if (lessonProgress.length >= 1) {
+    badges.push("Learning Explorer");
+  }
+
+  const completedFrameworks = new Set(lessonProgress.map((item) => item.frameworkId));
+  if (completedFrameworks.has("cbt")) {
+    badges.push("CBT Learner");
+  }
+  if (completedFrameworks.has("iceberg")) {
+    badges.push("Iceberg Learner");
+  }
+  if (completedFrameworks.has("growth")) {
+    badges.push("Growth Learner");
+  }
+
+  if (lessonProgress.length >= 6) {
+    badges.push("Mind Scholar");
+  }
+
   return badges;
 }
 
@@ -84,9 +113,10 @@ export async function updateUserGamification(
 
   // Count entries
   const entryCount = await prisma.entry.count({ where: { userId } });
+  const lessonCount = await prisma.learningLessonProgress.count({ where: { userId } });
 
   // Calculate new level
-  const level = calculateLevel(entryCount);
+  const level = calculateUnifiedLevel(entryCount, lessonCount);
 
   // Calculate badges
   const badges = await calculateBadges(userId);

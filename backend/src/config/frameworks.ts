@@ -191,6 +191,92 @@ export const CULTURAL_FRAMEWORK_IDS = [
   "myanmar",
 ] as const;
 
+export const THERAPEUTIC_FRAMEWORK_IDS = ["cbt", "iceberg", "growth"] as const;
+
+export interface CulturalFrameworkProfile {
+  country: string;
+  styleSummary: string;
+  contextAnchors: string[];
+  languageMarkers: string[];
+}
+
+export const CULTURAL_FRAMEWORK_PROFILES: Record<
+  (typeof CULTURAL_FRAMEWORK_IDS)[number],
+  CulturalFrameworkProfile
+> = {
+  singapore: {
+    country: "Singapore",
+    styleSummary: "practical, concise, and emotionally steady",
+    contextAnchors: [
+      "NUS = National University of Singapore",
+      "NTU = Nanyang Technological University",
+      "SMU = Singapore Management University",
+      "poly = polytechnic",
+      "NS = National Service",
+      "MRT = rail transport network",
+    ],
+    languageMarkers: ["lah", "can", "steady", "bo pian"],
+  },
+  indonesia: {
+    country: "Indonesia",
+    styleSummary: "patient, relational, and calm",
+    contextAnchors: ["kampus = university campus", "UKT = tuition contribution", "KKN = community service program"],
+    languageMarkers: ["pelan-pelan", "sabar", "ya", "nggak apa-apa"],
+  },
+  malaysia: {
+    country: "Malaysia",
+    styleSummary: "balanced, respectful, and practical",
+    contextAnchors: ["IPTA/IPTS = public/private higher education", "SPM = school completion exam", "MRT/LRT = urban rail lines"],
+    languageMarkers: ["lah", "boleh", "tak apa", "pelan-pelan"],
+  },
+  thailand: {
+    country: "Thailand",
+    styleSummary: "gentle, de-escalating, and kind",
+    contextAnchors: ["มหาวิทยาลัย references = university context", "BTS/MRT = Bangkok transport context"],
+    languageMarkers: ["sabai", "jai yen", "khrap/kha", "mai pen rai"],
+  },
+  philippines: {
+    country: "Philippines",
+    styleSummary: "warm, resilient, and hopeful",
+    contextAnchors: [
+      "UP = University of the Philippines",
+      "Ateneo/La Salle often refer to major universities",
+      "barangay = local community unit",
+    ],
+    languageMarkers: ["po", "kaya", "konti-konti", "ingat"],
+  },
+  vietnam: {
+    country: "Vietnam",
+    styleSummary: "disciplined, effort-focused, and forward moving",
+    contextAnchors: ["đại học = university context", "kỳ thi = exam period", "thực tập = internship"],
+    languageMarkers: ["co len", "tu tu", "on dinh", "duoc"],
+  },
+  brunei: {
+    country: "Brunei",
+    styleSummary: "composed, values-centered, and measured",
+    contextAnchors: ["UBD = Universiti Brunei Darussalam", "IBTE = Institute of Brunei Technical Education"],
+    languageMarkers: ["insyaAllah", "tenang", "baik-baik", "pelan"],
+  },
+  cambodia: {
+    country: "Cambodia",
+    styleSummary: "restorative, gentle, and steady",
+    contextAnchors: ["semester exam pressure", "family duty and study balance", "Phnom Penh commute stress"],
+    languageMarkers: ["sabay", "slowly", "ot te", "som"],
+  },
+  laos: {
+    country: "Laos",
+    styleSummary: "unhurried, grounded, and clear",
+    contextAnchors: ["university assignment cycle", "family expectation context", "city and provincial transition stress"],
+    languageMarkers: ["sabai", "bo pen nyang", "slowly", "jai yen"],
+  },
+  myanmar: {
+    country: "Myanmar",
+    styleSummary: "resilient, compassionate, and agency-focused",
+    contextAnchors: ["campus instability pressure", "exam and tuition tension", "family responsibility overlap"],
+    languageMarkers: ["thwa de", "a hmar", "ma lo bu", "hnin"],
+  },
+};
+
 /** Map from framework ID to its Gemini system prompt. */
 export const FRAMEWORK_PROMPT_MAP: Record<string, string> = Object.fromEntries(
   FRAMEWORK_CONFIGS.map((f) => [f.id, f.systemPrompt])

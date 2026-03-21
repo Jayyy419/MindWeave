@@ -2,6 +2,48 @@
 
 This changelog captures the implementation history from the start of this project session through the most recent deployment.
 
+## 2026-03-21 — Cultural Overlay in Settings + Learning Library
+
+### Cultural Framework Experience
+- Moved cultural framework selection out of the journal framework selector and into Settings as a persistent user preference.
+- Kept journal framework selection focused on therapeutic models (`cbt`, `iceberg`, `growth`) for per-entry reframing intent.
+- Added settings-level controls for:
+	- preferred cultural context overlay
+	- preferred cultural tone strength (`light`, `medium`, `strong`)
+- Updated journal flow so therapeutic reframes can be culturally tuned using the user's saved cultural overlay.
+
+### Cultural Context and Language Intelligence
+- Expanded backend framework metadata with country-specific context anchors and local language markers.
+- Added cultural overlay prompt instructions so the reframe model can:
+	- interpret local references in the selected country context
+	- inject light, natural local phrasing/slang without caricature
+	- preserve readability and emotional safety
+- Enabled explicit cultural context passing in entry preview/save APIs.
+
+### Learning Library (New Feature)
+- Added a new Learning Library product area and route (`/learning-library`).
+- Added therapeutic framework learning tracks with lesson metadata and progress summaries.
+- Added lesson detail views with objectives, estimated durations, and difficulty tags.
+- Added lesson completion actions and progress refresh flows.
+
+### Learning Progress and Gamification
+- Added new `LearningLessonProgress` persistence model.
+- Added backend learning APIs for:
+	- listing framework tracks
+	- fetching framework lesson details
+	- marking lessons as completed
+- Updated gamification calculations so completed lessons contribute to level progression and learning badges.
+- Added learning-focused badges:
+	- `Learning Explorer`
+	- `CBT Learner`
+	- `Iceberg Learner`
+	- `Growth Learner`
+	- `Mind Scholar`
+
+### Navigation and UX
+- Added Learning Library to top navigation.
+- Added a journal sidebar summary card showing active cultural tuning from Settings, with link-back to Settings for changes.
+
 ## 2026-03-20 — Dedicated Consent Flow and Opportunities
 
 ### Opportunities and Competition Access

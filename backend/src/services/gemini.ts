@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import {
   FRAMEWORK_PROMPT_MAP,
   FRAMEWORK_FALLBACK_MAP,
+  CULTURAL_FRAMEWORK_PROFILES,
   CULTURAL_FRAMEWORK_IDS,
 } from "../config/frameworks";
 
@@ -67,6 +68,29 @@ function buildCulturalToneInstruction(strength: CulturalToneStrength): string {
   return "TONE STRENGTH: MEDIUM. Use a balanced amount of culturally-inspired phrasing and thought structure while preserving clarity and accessibility.";
 }
 
+function buildCulturalOverlayInstruction(
+  culturalFramework: (typeof CULTURAL_FRAMEWORK_IDS)[number],
+  strength: CulturalToneStrength
+): string {
+  const profile = CULTURAL_FRAMEWORK_PROFILES[culturalFramework];
+
+  return `CULTURAL CONTEXT OVERLAY
+Selected culture: ${profile.country}
+Voice intent: ${profile.styleSummary}
+Tone strength: ${strength}
+
+Interpretation guidance:
+- Resolve region-specific references using this cultural context whenever plausible.
+- Context anchors: ${profile.contextAnchors.join("; ")}.
+- If text is ambiguous, prefer an interpretation that is common in ${profile.country} student/youth context.
+
+Language guidance:
+- Keep output in clear English while allowing occasional naturally-placed local expressions.
+- Candidate local expressions: ${profile.languageMarkers.join(", ")}.
+- Use at most 1-2 local terms in a short response and keep readability high.
+- Never caricature, stereotype, or force slang.`;
+}
+
 
 
 function buildFallbackTags(text: string): string[] {
@@ -98,10 +122,15 @@ function buildFallbackTags(text: string): string[] {
 export async function reframeText(
   text: string,
   framework: string,
-  options?: { allowFallback?: boolean; culturalToneStrength?: CulturalToneStrength }
+  options?: {
+    allowFallback?: boolean;
+    culturalToneStrength?: CulturalToneStrength;
+    culturalFramework?: (typeof CULTURAL_FRAMEWORK_IDS)[number];
+  }
 ): Promise<string> {
   const allowFallback = options?.allowFallback ?? true;
   const culturalToneStrength = options?.culturalToneStrength ?? "medium";
+  const culturalFramework = options?.culturalFramework;
   const systemPrompt = FRAMEWORK_PROMPT_MAP[framework];
   if (!systemPrompt) {
     throw new Error(`Unknown framework: ${framework}`);
@@ -111,8 +140,12 @@ export async function reframeText(
   }
 
   const isCulturalFramework = (CULTURAL_FRAMEWORK_IDS as readonly string[]).includes(framework);
-  const promptWithTone = isCulturalFramework
-    ? `${systemPrompt}\n\n${buildCulturalToneInstruction(culturalToneStrength)}`
+  const overlayFramework = culturalFramework ?? (isCulturalFramework ? (framework as (typeof CULTURAL_FRAMEWORK_IDS)[number]) : undefined);
+  const promptWithTone = overlayFramework
+    ? `${systemPrompt}\n\n${buildCulturalToneInstruction(culturalToneStrength)}\n\n${buildCulturalOverlayInstruction(
+        overlayFramework,
+        culturalToneStrength
+      )}`
     : systemPrompt;
 
   try {

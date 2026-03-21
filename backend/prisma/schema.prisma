@@ -27,6 +27,7 @@ model User {
   messages     Message[]
   resetTokens  PasswordResetToken[]
   consents     DataAccessConsent[]
+  lessonProgress LearningLessonProgress[]
 }
 
 /// One-time password reset token sent via email
@@ -132,4 +133,17 @@ model Message {
   createdAt        DateTime  @default(now())
   thinkTank        ThinkTank @relation(fields: [thinkTankId], references: [id])
   user             User?     @relation(fields: [userId], references: [id])
+}
+
+/// Tracks completed learning-library lessons for each user.
+model LearningLessonProgress {
+  id          String   @id @default(cuid())
+  userId      String
+  frameworkId String
+  lessonId    String
+  completedAt DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, lessonId])
+  @@index([userId, frameworkId])
 }

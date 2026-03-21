@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,6 +13,8 @@ import {
   createEntry,
   previewReframe,
   type FrameworkId,
+  type TherapeuticFrameworkId,
+  type CulturalFrameworkId,
   type CulturalToneStrength,
   type EntryChunk,
 } from "@/services/api";
@@ -20,7 +23,7 @@ import { CalendarDays, Heart, Info, Loader2, Pencil, Trash2, X } from "lucide-re
 type FrameworkCategory = "therapeutic" | "cultural";
 
 type FrameworkDefinition = {
-  value: FrameworkId;
+  value: TherapeuticFrameworkId | FrameworkId;
   category: FrameworkCategory;
   country?: string;
   countryExplainer?: string;
@@ -30,16 +33,6 @@ type FrameworkDefinition = {
   bestFor: string;
   caution: string;
 };
-
-const CULTURAL_TONE_OPTIONS: Array<{
-  value: CulturalToneStrength;
-  label: string;
-  hint: string;
-}> = [
-  { value: "light", label: "Light", hint: "Mostly neutral wording" },
-  { value: "medium", label: "Medium", hint: "Balanced cultural flavor" },
-  { value: "strong", label: "Strong", hint: "More culturally-shaped voice" },
-];
 
 const DEFAULT_CULTURAL_TONE_STRENGTH: CulturalToneStrength = "medium";
 
@@ -245,9 +238,10 @@ const REFLECTION_PROMPTS = [
 const DRAFT_KEY = "mindweave-journal-draft";
 const ENTRY_SUBTITLES_KEY = "mindweave-entry-subtitles";
 const MAX_ENTRY_WORDS = 100;
+const THERAPEUTIC_FRAMEWORK_VALUES: TherapeuticFrameworkId[] = ["cbt", "iceberg", "growth"];
 
 type FrameworkValue = FrameworkId | "";
-type PersistedFrameworkValue = Exclude<FrameworkValue, "">;
+type PersistedFrameworkValue = TherapeuticFrameworkId;
 
 export function HomePage() {
   const [title, setTitle] = useState("");
@@ -257,9 +251,9 @@ export function HomePage() {
   const [isFrameworkModalOpen, setIsFrameworkModalOpen] = useState(false);
   const [liveReframeDelay, setLiveReframeDelay] =
     useState<LiveReframeDelay>(DEFAULT_LIVE_REFRAME_DELAY);
-  const [culturalToneStrength, setCulturalToneStrength] = useState<CulturalToneStrength>(
-    DEFAULT_CULTURAL_TONE_STRENGTH
-  );
+  const [preferredCulturalFramework, setPreferredCulturalFramework] = useState<CulturalFrameworkId | "">("");
+  const [preferredCulturalToneStrength, setPreferredCulturalToneStrength] =
+    useState<CulturalToneStrength>(DEFAULT_CULTURAL_TONE_STRENGTH);
   const [isConfigLocked, setIsConfigLocked] = useState(false);
   const [mood, setMood] = useState("");
   const [intention, setIntention] = useState("");
@@ -283,16 +277,16 @@ export function HomePage() {
     () => FRAMEWORKS.find((item) => item.value === framework),
     [framework]
   );
-  const isCulturalFrameworkSelected = selectedFramework?.category === "cultural";
 
   const therapeuticFrameworks = useMemo(
     () => FRAMEWORKS.filter((item) => item.category === "therapeutic"),
     []
   );
-  const culturalFrameworks = useMemo(
-    () => FRAMEWORKS.filter((item) => item.category === "cultural"),
-    []
-  );
+  const selectedCulturalFrameworkLabel = useMemo(() => {
+    if (!preferredCulturalFramework) return "None selected";
+    const frameworkDefinition = FRAMEWORKS.find((item) => item.value === preferredCulturalFramework);
+    return frameworkDefinition?.label ?? preferredCulturalFramework;
+  }, [preferredCulturalFramework]);
 
   const committedUserText = useMemo(
     () => chunks.map((chunk) => chunk.userText).join("\n\n"),
@@ -369,7 +363,6 @@ export function HomePage() {
         text?: string;
         framework?: FrameworkValue;
         liveReframeDelay?: number;
-        culturalToneStrength?: CulturalToneStrength;
         isConfigLocked?: boolean;
         mood?: string;
         intention?: string;
@@ -378,18 +371,16 @@ export function HomePage() {
       setTitle(parsed.title ?? "");
       setChunks(parsed.chunks ?? []);
       setText(parsed.text ?? "");
-      setFramework(parsed.framework ?? "");
+      setFramework(
+        parsed.framework && THERAPEUTIC_FRAMEWORK_VALUES.includes(parsed.framework as TherapeuticFrameworkId)
+          ? (parsed.framework as TherapeuticFrameworkId)
+          : ""
+      );
       if (
         parsed.liveReframeDelay &&
         LIVE_REFRAME_DELAY_OPTIONS.includes(parsed.liveReframeDelay as (typeof LIVE_REFRAME_DELAY_OPTIONS)[number])
       ) {
         setLiveReframeDelay(parsed.liveReframeDelay as LiveReframeDelay);
-      }
-      if (
-        parsed.culturalToneStrength &&
-        CULTURAL_TONE_OPTIONS.some((option) => option.value === parsed.culturalToneStrength)
-      ) {
-        setCulturalToneStrength(parsed.culturalToneStrength);
       }
       const hasDraftContent = Boolean(parsed.text?.trim()) || (parsed.chunks?.length ?? 0) > 0;
       setIsConfigLocked(parsed.isConfigLocked ?? hasDraftContent);
@@ -401,6 +392,42 @@ export function HomePage() {
   }, []);
 
   useEffect(() => {
+    const rawSettings = localStorage.getItem("mindweave-settings");
+    if (!rawSettings) return;
+
+    try {
+      const parsed = JSON.parse(rawSettings) as {
+        defaultFramework?: TherapeuticFrameworkId | "";
+        defaultLiveReframeDelay?: 3 | 5 | 10 | "";
+        preferredCulturalFramework?: CulturalFrameworkId | "";
+        preferredCulturalToneStrength?: CulturalToneStrength;
+      };
+
+      if (
+        parsed.defaultFramework &&
+        THERAPEUTIC_FRAMEWORK_VALUES.includes(parsed.defaultFramework) &&
+        !framework
+      ) {
+        setFramework(parsed.defaultFramework);
+      }
+
+      if (parsed.defaultLiveReframeDelay && !liveReframeDelay) {
+        setLiveReframeDelay(parsed.defaultLiveReframeDelay);
+      }
+
+      if (parsed.preferredCulturalFramework) {
+        setPreferredCulturalFramework(parsed.preferredCulturalFramework);
+      }
+
+      if (parsed.preferredCulturalToneStrength) {
+        setPreferredCulturalToneStrength(parsed.preferredCulturalToneStrength);
+      }
+    } catch {
+      // Ignore malformed settings.
+    }
+  }, [framework, liveReframeDelay]);
+
+  useEffect(() => {
     const timeout = setTimeout(() => {
       const draft = {
         title,
@@ -408,7 +435,6 @@ export function HomePage() {
         text,
         framework,
         liveReframeDelay,
-        culturalToneStrength,
         isConfigLocked,
         mood,
         intention,
@@ -424,7 +450,6 @@ export function HomePage() {
     text,
     framework,
     liveReframeDelay,
-    culturalToneStrength,
     isConfigLocked,
     mood,
     intention,
@@ -473,8 +498,8 @@ export function HomePage() {
     editingChunkId,
     liveReframeDelay,
     isConfigLocked,
-    isCulturalFrameworkSelected,
-    culturalToneStrength,
+    preferredCulturalFramework,
+    preferredCulturalToneStrength,
   ]);
 
   function addPrompt(prompt: string) {
@@ -518,7 +543,7 @@ export function HomePage() {
     setEditError("");
   }
 
-  function chooseFramework(nextFramework: FrameworkValue) {
+  function chooseFramework(nextFramework: TherapeuticFrameworkId) {
     if (isConfigLocked) return;
     setFramework(nextFramework);
     setIsFrameworkModalOpen(false);
@@ -546,7 +571,8 @@ export function HomePage() {
       const preview = await previewReframe({
         text: draftSnapshot,
         framework: framework as PersistedFrameworkValue,
-        culturalToneStrength: isCulturalFrameworkSelected ? culturalToneStrength : undefined,
+        culturalFramework: preferredCulturalFramework || undefined,
+        culturalToneStrength: preferredCulturalFramework ? preferredCulturalToneStrength : undefined,
       });
 
       if (requestId !== liveRequestId.current) return;
@@ -646,7 +672,8 @@ export function HomePage() {
       const preview = await previewReframe({
         text: trimmed,
         framework: framework as PersistedFrameworkValue,
-        culturalToneStrength: isCulturalFrameworkSelected ? culturalToneStrength : undefined,
+        culturalFramework: preferredCulturalFramework || undefined,
+        culturalToneStrength: preferredCulturalFramework ? preferredCulturalToneStrength : undefined,
       });
 
       setChunks((previous) =>
@@ -704,7 +731,8 @@ export function HomePage() {
         title: title.trim(),
         text: fullJournalUserText.trim(),
         framework,
-        culturalToneStrength: isCulturalFrameworkSelected ? culturalToneStrength : undefined,
+        culturalFramework: preferredCulturalFramework || undefined,
+        culturalToneStrength: preferredCulturalFramework ? preferredCulturalToneStrength : undefined,
         chunks: buildEntryChunksForSave(),
       });
       if (checkInSummary) {
@@ -718,7 +746,6 @@ export function HomePage() {
       setText("");
       setFramework("");
       setLiveReframeDelay(DEFAULT_LIVE_REFRAME_DELAY);
-      setCulturalToneStrength(DEFAULT_CULTURAL_TONE_STRENGTH);
       setIsConfigLocked(false);
       setMood("");
       setIntention("");
@@ -753,7 +780,7 @@ export function HomePage() {
           <aside className="space-y-4">
             <div className="rounded-2xl border border-amber-200/80 bg-white/75 p-4">
               <label className="mb-2 block text-sm font-medium text-stone-700">
-                Choose your reframing lens
+                Choose your therapeutic reframing lens
               </label>
               <button
                 type="button"
@@ -768,7 +795,7 @@ export function HomePage() {
                 <p className="mt-1 text-xs text-stone-500">
                   {selectedFramework
                     ? selectedFramework.description
-                    : "Tap to compare each framework in detail before selecting."}
+                    : "Tap to compare CBT, Iceberg, and Growth in detail before selecting."}
                 </p>
               </button>
               {framework && (
@@ -778,37 +805,21 @@ export function HomePage() {
               )}
             </div>
 
-            {isCulturalFrameworkSelected && (
-              <div className="rounded-2xl border border-indigo-200/80 bg-indigo-50/60 p-4">
-                <label className="mb-2 block text-sm font-medium text-stone-700">
-                  Cultural tone strength
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  {CULTURAL_TONE_OPTIONS.map((option) => {
-                    const selected = culturalToneStrength === option.value;
-                    return (
-                      <button
-                        key={option.value}
-                        type="button"
-                        onClick={() => setCulturalToneStrength(option.value)}
-                        disabled={loading || isConfigLocked}
-                        className={`rounded-lg border px-2 py-2 text-left transition-colors ${
-                          selected
-                            ? "border-indigo-400 bg-indigo-100 text-indigo-900"
-                            : "border-indigo-200 bg-white text-stone-700 hover:border-indigo-300"
-                        }`}
-                      >
-                        <p className="text-xs font-semibold">{option.label}</p>
-                        <p className="mt-0.5 text-[11px] leading-tight text-stone-500">{option.hint}</p>
-                      </button>
-                    );
-                  })}
-                </div>
-                <p className="mt-2 text-xs text-stone-500">
-                  Adjust how much regional style appears in wording and voice.
-                </p>
-              </div>
-            )}
+            <div className="rounded-2xl border border-indigo-200/80 bg-indigo-50/60 p-4">
+              <label className="mb-2 block text-sm font-medium text-stone-700">Cultural context tuning</label>
+              <p className="text-xs text-stone-700">
+                Overlay: <span className="font-semibold">{selectedCulturalFrameworkLabel}</span>
+              </p>
+              <p className="mt-1 text-xs text-stone-700">
+                Tone: <span className="font-semibold capitalize">{preferredCulturalToneStrength}</span>
+              </p>
+              <p className="mt-2 text-xs text-stone-500">
+                This is configured in Settings and applied automatically during reframing.
+              </p>
+              <Link to="/settings" className="mt-3 inline-block text-xs font-medium text-indigo-700 hover:text-indigo-800">
+                Open Settings to change cultural overlay
+              </Link>
+            </div>
 
             <div className="rounded-2xl border border-amber-200/80 bg-white/75 p-4">
               <label className="mb-2 block text-sm font-medium text-stone-700">
@@ -837,7 +848,7 @@ export function HomePage() {
 
             <div className="rounded-2xl border border-amber-200/80 bg-amber-50/70 p-4">
               <p className="text-xs text-amber-900">
-                Please select your preferred framework and reframing countdown before you begin writing. These options stay fixed until this entry is saved.
+                Please select your therapeutic framework and reframing countdown before you begin writing. Cultural overlay settings are applied automatically from Settings.
               </p>
               <Button
                 type="button"
@@ -1140,7 +1151,7 @@ export function HomePage() {
                   Choose the reframing lens for this entry
                 </h2>
                 <p className="mt-1 text-sm text-stone-600">
-                  Choose from therapeutic frameworks or ASEAN cultural frameworks inspired by regional communication styles.
+                  Choose a therapeutic framework. Cultural context is configured separately in Settings.
                 </p>
               </div>
               <button
@@ -1192,70 +1203,8 @@ export function HomePage() {
 
                         <Button
                           type="button"
-                          onClick={() => chooseFramework(fw.value as FrameworkValue)}
+                          onClick={() => chooseFramework(fw.value as TherapeuticFrameworkId)}
                           className="mt-4 h-10 w-full bg-emerald-700 text-emerald-50 hover:bg-emerald-800"
-                        >
-                          {selected ? "Selected" : "Use this framework"}
-                        </Button>
-                      </article>
-                    );
-                  })}
-                </div>
-              </section>
-
-              <section>
-                <h3 className="mb-1 text-sm font-semibold uppercase tracking-[0.12em] text-indigo-800">
-                  Cultural frameworks (ASEAN)
-                </h3>
-                <p className="mb-3 text-xs text-stone-600">
-                  Region-inspired communication styles designed for resonance and belonging, while keeping language respectful and clear.
-                </p>
-                <div className="grid gap-4 lg:grid-cols-2">
-                  {culturalFrameworks.map((fw) => {
-                    const selected = framework === fw.value;
-                    return (
-                      <article
-                        key={fw.value}
-                        className={`rounded-2xl border p-4 ${
-                          selected
-                            ? "border-indigo-400 bg-indigo-50/70 shadow-[0_14px_35px_-24px_rgba(79,70,229,0.55)]"
-                            : "border-amber-200/80 bg-white/80"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-3">
-                          <h3 className="text-lg font-semibold text-stone-800">{fw.label}</h3>
-                          {fw.country && (
-                            <span className="rounded-full border border-indigo-200 bg-indigo-100 px-2.5 py-0.5 text-[11px] font-medium text-indigo-800">
-                              {fw.country}
-                            </span>
-                          )}
-                        </div>
-                        {fw.countryExplainer && (
-                          <p className="mt-2 inline-flex rounded-full border border-indigo-200/80 bg-indigo-50 px-2.5 py-0.5 text-[11px] text-indigo-800">
-                            {fw.countryExplainer}
-                          </p>
-                        )}
-                        <p className="mt-2 text-sm text-stone-600">{fw.description}</p>
-
-                        <div className="mt-3 rounded-lg border border-indigo-100 bg-indigo-50/55 p-3">
-                          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-indigo-800">How it works</p>
-                          <p className="mt-1 text-sm text-stone-700">{fw.deepExplanation}</p>
-                        </div>
-
-                        <div className="mt-3 rounded-lg border border-emerald-100 bg-emerald-50/60 p-3">
-                          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-emerald-800">Best for</p>
-                          <p className="mt-1 text-sm text-stone-700">{fw.bestFor}</p>
-                        </div>
-
-                        <div className="mt-3 rounded-lg border border-rose-100 bg-rose-50/60 p-3">
-                          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-rose-800">Use carefully when</p>
-                          <p className="mt-1 text-sm text-stone-700">{fw.caution}</p>
-                        </div>
-
-                        <Button
-                          type="button"
-                          onClick={() => chooseFramework(fw.value as FrameworkValue)}
-                          className="mt-4 h-10 w-full bg-indigo-700 text-indigo-50 hover:bg-indigo-800"
                         >
                           {selected ? "Selected" : "Use this framework"}
                         </Button>

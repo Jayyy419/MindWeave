@@ -78,7 +78,7 @@ function getStoredChunks(chunksRaw: string, originalText: string, reframedText: 
  * Body: { text: string, framework: "cbt" | "iceberg" | "growth" }
  */
 router.post("/reframe-preview", async (req: Request, res: Response): Promise<void> => {
-  const { text, framework, culturalToneStrength } = req.body;
+  const { text, framework, culturalToneStrength, culturalFramework } = req.body;
 
   if (!text || typeof text !== "string" || text.trim().length === 0) {
     res.status(400).json({ error: "text is required and must be a non-empty string" });
@@ -108,6 +108,16 @@ router.post("/reframe-preview", async (req: Request, res: Response): Promise<voi
     return;
   }
 
+  if (
+    culturalFramework !== undefined &&
+    !(CULTURAL_FRAMEWORK_IDS as readonly string[]).includes(culturalFramework)
+  ) {
+    res.status(400).json({
+      error: `culturalFramework must be one of: ${CULTURAL_FRAMEWORK_IDS.join(", ")}`,
+    });
+    return;
+  }
+
   if (text.length > 5000) {
     res.status(400).json({ error: "text must be 5000 characters or fewer" });
     return;
@@ -121,6 +131,7 @@ router.post("/reframe-preview", async (req: Request, res: Response): Promise<voi
   try {
     const reframedText = await reframeText(text.trim(), framework, {
       allowFallback: false,
+      culturalFramework,
       culturalToneStrength: parsedToneStrength,
     });
     res.json({
@@ -148,7 +159,7 @@ router.post("/reframe-preview", async (req: Request, res: Response): Promise<voi
  */
 router.post("/", async (req: Request, res: Response): Promise<void> => {
   const userId = (req as any).userId as string;
-  const { title, text, framework, culturalToneStrength, chunks } = req.body;
+  const { title, text, framework, culturalToneStrength, culturalFramework, chunks } = req.body;
 
   // Validate input
   if (typeof title !== "string" || title.trim().length === 0) {
@@ -189,6 +200,16 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
     return;
   }
 
+  if (
+    culturalFramework !== undefined &&
+    !(CULTURAL_FRAMEWORK_IDS as readonly string[]).includes(culturalFramework)
+  ) {
+    res.status(400).json({
+      error: `culturalFramework must be one of: ${CULTURAL_FRAMEWORK_IDS.join(", ")}`,
+    });
+    return;
+  }
+
   // Limit text length to prevent abuse
   if (text.length > 5000) {
     res.status(400).json({ error: "text must be 5000 characters or fewer" });
@@ -206,7 +227,10 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
     // Validate journal intent first, then extract tags in parallel.
     // reframeText throws NOT_JOURNAL_ENTRY if the content is off-topic.
     const [reframedText, tags] = await Promise.all([
-      reframeText(text.trim(), framework, { culturalToneStrength: parsedToneStrength }),
+      reframeText(text.trim(), framework, {
+        culturalFramework,
+        culturalToneStrength: parsedToneStrength,
+      }),
       extractTags(text.trim()),
     ]);
 

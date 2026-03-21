@@ -15,6 +15,8 @@ import {
   revokeConsent,
   sendEmailChangeOtp,
   type AccessScope,
+  type CulturalFrameworkId,
+  type CulturalToneStrength,
   type UserProfile,
   type UserConsentRecord,
   updateUsername,
@@ -25,6 +27,8 @@ import { AlertCircle, Check, CheckCircle2, Loader2, Save, ShieldCheck, XCircle }
 
 interface UserSettings {
   defaultFramework: "cbt" | "iceberg" | "growth" | "";
+  preferredCulturalFramework: CulturalFrameworkId | "";
+  preferredCulturalToneStrength: CulturalToneStrength;
   defaultLiveReframeDelay: 3 | 5 | 10 | "";
   autoSaveInterval: 10 | 20 | 30 | 60;
   liveReframeEnabled: boolean;
@@ -42,6 +46,8 @@ interface UserSettings {
 
 const DEFAULT_SETTINGS: UserSettings = {
   defaultFramework: "",
+  preferredCulturalFramework: "",
+  preferredCulturalToneStrength: "medium",
   defaultLiveReframeDelay: "",
   autoSaveInterval: 20,
   liveReframeEnabled: true,
@@ -68,6 +74,19 @@ const accessScopeLabels: Record<AccessScope, string> = {
   selectedJournalExcerpts: "Selected excerpts",
   fullJournalAccess: "Full journal access",
 };
+
+const culturalFrameworkOptions: Array<{ value: CulturalFrameworkId; label: string; country: string }> = [
+  { value: "singapore", label: "Singaporean Grounded Reframe", country: "Singapore" },
+  { value: "indonesia", label: "Indonesian Calm Reframe", country: "Indonesia" },
+  { value: "malaysia", label: "Malaysian Balanced Reframe", country: "Malaysia" },
+  { value: "thailand", label: "Thai Gentle Reframe", country: "Thailand" },
+  { value: "philippines", label: "Filipino Resilient Reframe", country: "Philippines" },
+  { value: "vietnam", label: "Vietnamese Perseverance Reframe", country: "Vietnam" },
+  { value: "brunei", label: "Bruneian Composed Reframe", country: "Brunei" },
+  { value: "cambodia", label: "Cambodian Steady Reframe", country: "Cambodia" },
+  { value: "laos", label: "Lao Grounded Reframe", country: "Laos" },
+  { value: "myanmar", label: "Myanmar Resilience Reframe", country: "Myanmar" },
+];
 
 export function SettingsPage() {
   const { token, user, setSession } = useUser();
@@ -140,7 +159,7 @@ export function SettingsPage() {
     const storedSettings = localStorage.getItem("mindweave-settings");
     if (storedSettings) {
       try {
-        setSettings(JSON.parse(storedSettings));
+        setSettings({ ...DEFAULT_SETTINGS, ...JSON.parse(storedSettings) });
       } catch {
         setSettings(DEFAULT_SETTINGS);
       }
@@ -598,6 +617,56 @@ export function SettingsPage() {
                 <SelectItem value="cbt">CBT (Cognitive Behavioral Therapy)</SelectItem>
                 <SelectItem value="iceberg">Iceberg Model</SelectItem>
                 <SelectItem value="growth">Growth Mindset</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-stone-700">Preferred Cultural Context Overlay</label>
+            <p className="mb-2 text-xs text-stone-500">
+              This tunes AI language, context assumptions, and conversational style around your selected ASEAN culture.
+            </p>
+            <Select
+              value={settings.preferredCulturalFramework || ASK_EACH_TIME}
+              onValueChange={(v: string) =>
+                handleSettingChange(
+                  "preferredCulturalFramework",
+                  v === ASK_EACH_TIME ? "" : (v as CulturalFrameworkId)
+                )
+              }
+            >
+              <SelectTrigger className="border-amber-200 bg-white">
+                <SelectValue placeholder="No cultural overlay" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ASK_EACH_TIME}>No cultural overlay</SelectItem>
+                {culturalFrameworkOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.country} - {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-stone-700">Cultural Tone Strength</label>
+            <p className="mb-2 text-xs text-stone-500">
+              Controls how strongly local mannerisms and phrasing appear in reframed text.
+            </p>
+            <Select
+              value={settings.preferredCulturalToneStrength}
+              onValueChange={(v: string) =>
+                handleSettingChange("preferredCulturalToneStrength", v as CulturalToneStrength)
+              }
+            >
+              <SelectTrigger className="border-amber-200 bg-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="light">Light (subtle local flavor)</SelectItem>
+                <SelectItem value="medium">Medium (balanced local flavor)</SelectItem>
+                <SelectItem value="strong">Strong (clear local flavor)</SelectItem>
               </SelectContent>
             </Select>
           </div>

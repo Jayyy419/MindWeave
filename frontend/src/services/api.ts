@@ -136,6 +136,20 @@ export interface EntryDetail {
   createdAt: string;
 }
 
+export type TherapeuticFrameworkId = "cbt" | "iceberg" | "growth";
+
+export type CulturalFrameworkId =
+  | "singapore"
+  | "indonesia"
+  | "malaysia"
+  | "thailand"
+  | "philippines"
+  | "vietnam"
+  | "brunei"
+  | "cambodia"
+  | "laos"
+  | "myanmar";
+
 export type FrameworkId =
   | "cbt"
   | "iceberg"
@@ -155,13 +169,43 @@ export type CulturalToneStrength = "light" | "medium" | "strong";
 
 export interface ReframeRequest {
   text: string;
-  framework: FrameworkId;
+  framework: TherapeuticFrameworkId | FrameworkId;
+  culturalFramework?: CulturalFrameworkId;
   culturalToneStrength?: CulturalToneStrength;
 }
 
 export interface CreateEntryRequest extends ReframeRequest {
   title: string;
   chunks?: EntryChunk[];
+}
+
+export interface LearningFrameworkSummary {
+  id: TherapeuticFrameworkId;
+  label: string;
+  description: string;
+  totalLessons: number;
+  completedLessons: number;
+  progressPercent: number;
+}
+
+export interface LearningLesson {
+  id: string;
+  title: string;
+  summary: string;
+  durationMinutes: number;
+  difficulty: "beginner" | "intermediate";
+  objectives: string[];
+  completed: boolean;
+  completedAt: string | null;
+}
+
+export interface LearningFrameworkDetail {
+  id: TherapeuticFrameworkId;
+  label: string;
+  description: string;
+  totalLessons: number;
+  completedLessons: number;
+  lessons: LearningLesson[];
 }
 
 export interface ReframePreviewResponse {
@@ -576,6 +620,43 @@ export async function revokeConsent(id: string): Promise<{ id: string; status: s
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || "Failed to revoke consent");
+  }
+  return res.json();
+}
+
+export async function listLearningFrameworks(): Promise<{ frameworks: LearningFrameworkSummary[] }> {
+  const res = await fetch(`${API_BASE_URL}/learning/frameworks`, { headers: headers() });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to load learning frameworks");
+  }
+  return res.json();
+}
+
+export async function getLearningFramework(id: TherapeuticFrameworkId): Promise<LearningFrameworkDetail> {
+  const res = await fetch(`${API_BASE_URL}/learning/frameworks/${encodeURIComponent(id)}`, {
+    headers: headers(),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to load framework lessons");
+  }
+  return res.json();
+}
+
+export async function completeLesson(id: string): Promise<{
+  lessonId: string;
+  frameworkId: TherapeuticFrameworkId;
+  completedAt: string;
+  message: string;
+}> {
+  const res = await fetch(`${API_BASE_URL}/learning/lessons/${encodeURIComponent(id)}/complete`, {
+    method: "POST",
+    headers: headers(),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to complete lesson");
   }
   return res.json();
 }

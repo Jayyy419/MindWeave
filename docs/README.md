@@ -23,6 +23,9 @@ Welcome to the MindWeave documentation. Use the links below to navigate.
 | [Developer Workflow](developer-workflow.md) | How to implement, test, commit, push, and deploy changes safely |
 | [Release Checklist](release-checklist.md) | Pre-release and post-release checklist for reliable production deployments |
 | [Framework Catalog](framework-catalog.md) | Canonical list of therapeutic and ASEAN cultural frameworks, including maintenance checklist |
+| [29 Improvement Roadmap](improvements-roadmap-29.md) | Prioritized list of 29 product and outreach upgrades aligned to competition judging |
+| [Proposal Improvement Draft](proposal-improvement.md) | Ready-to-use 5-page proposal structure with rubric-aligned content checklist |
+| [Pitch Video Improvement Draft](pitch-video-improvements.md) | 3-minute pitch storyboard and script guide aligned to judging criteria |
 
 ---
 

@@ -61,6 +61,8 @@ type AbSummary = {
 
 export function ImpactHubPage() {
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"overview" | "campaigns" | "experiments" | "governance" | "analytics">("overview");
+  const [tabLoading, setTabLoading] = useState<Record<string, boolean>>({});
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingSurvey, setSavingSurvey] = useState(false);
   const [savingCampaign, setSavingCampaign] = useState(false);
@@ -158,59 +160,111 @@ export function ImpactHubPage() {
       .filter((item) => item.key.length > 0);
   }
 
-  async function refreshAll() {
-    const [
-      groupsResponse,
-      profileResponse,
-      evidenceResponse,
-      campaignsResponse,
-      dashboardResponse,
-      followUpResponse,
-      learningEffectivenessResponse,
-      rolesResponse,
-      abTestsResponse,
-      aiAuditResponse,
-      costResponse,
-    ] = await Promise.all([
-      listBeneficiaryGroups(),
-      getImpactProfile(),
-      listAseanEvidence(),
-      listOutreachCampaigns(),
-      getImpactDashboard(),
-      getFollowUpReminders(),
-      getLearningEffectiveness(),
-      listAdminRoleAssignments(),
-      listAbTests(),
-      getAiAuditSummary(),
-      getCostMonitoring(),
-    ]);
+  async function loadOverviewTab() {
+    setTabLoading((prev) => ({ ...prev, overview: true }));
+    try {
+      const [groupsResponse, profileResponse, evidenceResponse, dashboardResponse, followUpResponse, learningEffectivenessResponse] =
+        await Promise.all([
+          listBeneficiaryGroups(),
+          getImpactProfile(),
+          listAseanEvidence(),
+          getImpactDashboard(),
+          getFollowUpReminders(),
+          getLearningEffectiveness(),
+        ]);
 
-    setBeneficiaryGroups(groupsResponse.groups);
-    setBeneficiaryGroup(profileResponse.beneficiaryGroup);
-    setEvidence(evidenceResponse.evidence);
-    setCampaigns(campaignsResponse.campaigns);
-    setDashboard(dashboardResponse);
-    setFollowUpsDue(followUpResponse.due ?? []);
-    setLearningEffectiveness(learningEffectivenessResponse);
-    setRoleAssignments(rolesResponse.roles ?? []);
-    setAbExperiments(abTestsResponse.experiments ?? []);
-    setAiAuditSummary(aiAuditResponse);
-    setCostMonitoring(costResponse);
+      setBeneficiaryGroups(groupsResponse.groups);
+      setBeneficiaryGroup(profileResponse.beneficiaryGroup);
+      setEvidence(evidenceResponse.evidence);
+      setDashboard(dashboardResponse);
+      setFollowUpsDue(followUpResponse.due ?? []);
+      setLearningEffectiveness(learningEffectivenessResponse);
+    } finally {
+      setTabLoading((prev) => ({ ...prev, overview: false }));
+    }
+  }
 
-    const summaries = await Promise.all(
-      (abTestsResponse.experiments ?? []).map(async (experiment) => {
-        const summary = await getAbTestSummary(experiment.id);
-        return [experiment.id, { totals: summary.totals, variants: summary.variants }] as const;
-      })
-    );
-    setAbSummaryByExperiment(Object.fromEntries(summaries));
+  async function loadCampaignsTab() {
+    setTabLoading((prev) => ({ ...prev, campaigns: true }));
+    try {
+      const campaignsResponse = await listOutreachCampaigns();
+      setCampaigns(campaignsResponse.campaigns);
+    } finally {
+      setTabLoading((prev) => ({ ...prev, campaigns: false }));
+    }
+  }
+
+  async function loadExperimentsTab() {
+    setTabLoading((prev) => ({ ...prev, experiments: true }));
+    try {
+      const abTestsResponse = await listAbTests();
+      setAbExperiments(abTestsResponse.experiments ?? []);
+
+      const summaries = await Promise.all(
+        (abTestsResponse.experiments ?? []).map(async (experiment) => {
+          const summary = await getAbTestSummary(experiment.id);
+          return [experiment.id, { totals: summary.totals, variants: summary.variants }] as const;
+        })
+      );
+      setAbSummaryByExperiment(Object.fromEntries(summaries));
+    } finally {
+      setTabLoading((prev) => ({ ...prev, experiments: false }));
+    }
+  }
+
+  async function loadGovernanceTab() {
+    setTabLoading((prev) => ({ ...prev, governance: true }));
+    try {
+      const rolesResponse = await listAdminRoleAssignments();
+      setRoleAssignments(rolesResponse.roles ?? []);
+    } finally {
+      setTabLoading((prev) => ({ ...prev, governance: false }));
+    }
+  }
+
+  async function loadAnalyticsTab() {
+    setTabLoading((prev) => ({ ...prev, analytics: true }));
+    try {
+      const [aiAuditResponse, costResponse] = await Promise.all([getAiAuditSummary(), getCostMonitoring()]);
+      setAiAuditSummary(aiAuditResponse);
+      setCostMonitoring(costResponse);
+    } finally {
+      setTabLoading((prev) => ({ ...prev, analytics: false }));
+    }
+  }
+
+  async function loadCurrentTab() {
+    switch (activeTab) {
+      case "campaigns":
+        return loadCampaignsTab();
+      case "experiments":
+        return loadExperimentsTab();
+      case "governance":
+        return loadGovernanceTab();
+      case "analytics":
+        return loadAnalyticsTab();
+      case "overview":
+      default:
+        return loadOverviewTab();
+    }
   }
 
   useEffect(() => {
-    refreshAll()
+    loadOverviewTab()
       .catch((err: Error) => setError(err.message || "Failed to load impact hub"))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (activeTab !== "overview") {
+      loadCurrentTab();
+    }
+  }, [activeTab]);
+
+  async function refreshCurrentTab() {
+    // Reload only the current tab's data to reflect changes
+    return loadCurrentTab();
+  }
 
   async function handleUpdateBeneficiary() {
     setSavingProfile(true);
@@ -218,7 +272,7 @@ export function ImpactHubPage() {
     setSuccess("");
     try {
       await updateBeneficiaryGroup(beneficiaryGroup);
-      await refreshAll();
+      await loadOverviewTab();
       setSuccess("Beneficiary group updated.");
     } catch (err: any) {
       setError(err.message || "Failed to update beneficiary group");
@@ -233,7 +287,7 @@ export function ImpactHubPage() {
     setSuccess("");
     try {
       await submitOutcomeSurvey({ surveyType, ...surveyScores });
-      await refreshAll();
+      await loadOverviewTab();
       setSuccess("Survey submitted. Impact deltas will update automatically.");
     } catch (err: any) {
       setError(err.message || "Failed to submit survey");
@@ -249,7 +303,7 @@ export function ImpactHubPage() {
     try {
       await createOutreachCampaign(campaignForm);
       setCampaignForm({ name: "", channel: "Campus workshop", targetReach: 100 });
-      await refreshAll();
+      await loadCampaignsTab();
       setSuccess("Outreach campaign created.");
     } catch (err: any) {
       setError(err.message || "Failed to create campaign");
@@ -265,7 +319,7 @@ export function ImpactHubPage() {
     setSuccess("");
     try {
       await addOutreachTouchpoint(campaignId, data);
-      await refreshAll();
+      await loadCampaignsTab();
       setSuccess("Outreach touchpoint recorded.");
     } catch (err: any) {
       setError(err.message || "Failed to add touchpoint");
@@ -282,7 +336,7 @@ export function ImpactHubPage() {
     setSuccess("");
     try {
       await submitCampaignFunnelMetric(campaignId, { stage, count: 1 });
-      await refreshAll();
+      await loadCampaignsTab();
       setSuccess(`Funnel metric updated for ${stage}.`);
     } catch (err: any) {
       setError(err.message || "Failed to update funnel metric");
@@ -304,7 +358,7 @@ export function ImpactHubPage() {
         role: roleForm.role.trim().toLowerCase(),
         scope: roleForm.scope,
       });
-      await refreshAll();
+      await loadGovernanceTab();
       setSuccess("RBAC role assignment updated.");
     } catch (err: any) {
       setError(err.message || "Failed to assign RBAC role");
@@ -336,7 +390,7 @@ export function ImpactHubPage() {
         variants,
       });
       setAbTestForm((prev) => ({ ...prev, name: "" }));
-      await refreshAll();
+      await loadExperimentsTab();
       setSuccess("A/B experiment created.");
     } catch (err: any) {
       setError(err.message || "Failed to create A/B test");

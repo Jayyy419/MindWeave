@@ -483,6 +483,101 @@ export function SettingsPage() {
         </div>
       )}
 
+      <Card className="border-cyan-200/80 bg-gradient-to-br from-cyan-50 via-teal-50 to-emerald-50 shadow-md">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-xl text-cyan-900">
+            <div className="h-8 w-8 rounded-full bg-gradient-to-br from-cyan-400 to-emerge-400 flex items-center justify-center text-white font-bold">🌏</div>
+            Cultural Framework Preference
+          </CardTitle>
+          <p className="mt-2 text-sm text-cyan-800">
+            Choose how you want MindWeave to adapt its language, assumptions, and thinking style based on cultural context.
+            Your choice will be applied to all AI reframing and support features.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <label className="mb-3 block text-sm font-semibold text-cyan-900">Select Your ASEAN Region</label>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {culturalFrameworkOptions.map((option) => {
+                const isSelected = settings.preferredCulturalFramework === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    onClick={() => handleSettingChange("preferredCulturalFramework", option.value)}
+                    className={`rounded-lg border-2 p-3 text-left transition-all ${ 
+                      isSelected
+                        ? "border-cyan-500 bg-white shadow-md"
+                        : "border-cyan-100 bg-white/60 hover:border-cyan-300 hover:bg-white"
+                    }`}
+                  >
+                    <p className="font-semibold text-cyan-900">{option.country}</p>
+                    <p className="text-xs text-cyan-700">{option.label}</p>
+                    {isSelected && <p className="mt-1 text-xs font-medium text-emerald-600">✓ Selected</p>}
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              onClick={() => handleSettingChange("preferredCulturalFramework", "")}
+              className={`mt-2 w-full rounded-lg border-2 p-3 text-left transition-all ${
+                settings.preferredCulturalFramework === ""
+                  ? "border-cyan-500 bg-white shadow-md"
+                  : "border-cyan-100 bg-white/60 hover:border-cyan-300 hover:bg-white"
+              }`}
+            >
+              <p className="font-semibold text-cyan-900">No Cultural Overlay</p>
+              <p className="text-xs text-cyan-700">Use neutral global English</p>
+              {settings.preferredCulturalFramework === "" && <p className="mt-1 text-xs font-medium text-emerald-600">✓ Selected</p>}
+            </button>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-cyan-900">How Strong Should the Cultural Tone Be?</label>
+            <p className="mb-3 text-xs text-cyan-700">This controls how prominently local language patterns and thinking styles appear.</p>
+            <div className="grid gap-2 sm:grid-cols-3">
+              {[
+                { value: "light" as const, label: "Light", desc: "Subtle flavor, mostly neutral English" },
+                { value: "medium" as const, label: "Medium", desc: "Balanced local & global perspective" },
+                { value: "strong" as const, label: "Strong", desc: "Clear local voice and phrasing" },
+              ].map((option) => {
+                const isSelected = settings.preferredCulturalToneStrength === option.value;
+                return (
+                  <button
+                    key={option.value}
+                    onClick={() => handleSettingChange("preferredCulturalToneStrength", option.value)}
+                    disabled={!settings.preferredCulturalFramework}
+                    className={`rounded-lg border-2 p-3 text-left transition-all ${
+                      !settings.preferredCulturalFramework
+                        ? "border-gray-200 bg-gray-50 cursor-not-allowed opacity-50"
+                        : isSelected
+                        ? "border-cyan-500 bg-white shadow-md"
+                        : "border-cyan-100 bg-white/60 hover:border-cyan-300 hover:bg-white"
+                    }`}
+                  >
+                    <p className="font-semibold text-cyan-900">{option.label}</p>
+                    <p className="text-xs text-cyan-700">{option.desc}</p>
+                    {isSelected && <p className="mt-1 text-xs font-medium text-emerald-600">✓ Selected</p>}
+                  </button>
+                );
+              })}
+            </div>
+            {!settings.preferredCulturalFramework && (
+              <p className="mt-2 text-xs text-stone-500">Select a region above to customize tone strength.</p>
+            )}
+          </div>
+
+          <div className="rounded-lg border border-cyan-200 bg-cyan-50/50 p-3 text-xs text-cyan-800">
+            <p className="font-semibold text-cyan-900">How This Works:</p>
+            <ul className="mt-2 space-y-1 text-cyan-700">
+              <li>✓ <strong>Language:</strong> Local expressions and colloquialisms that feel natural to your region</li>
+              <li>✓ <strong>Context:</strong> References to universities, exams, and situations familiar in {settings.preferredCulturalFramework ? culturalFrameworkOptions.find(o => o.value === settings.preferredCulturalFramework)?.country || "your region" : "your ASEAN region"}</li>
+              <li>✓ <strong>Thinking Style:</strong> Emotional reasoning aligned to cultural values and communication norms</li>
+              <li>✓ <strong>All Features:</strong> Applied across journal reframing, learning explanations, and support resources</li>
+            </ul>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card className="border-amber-200/80 bg-white/80 shadow-none">
         <CardHeader>
           <CardTitle className="text-lg text-stone-800">Account</CardTitle>

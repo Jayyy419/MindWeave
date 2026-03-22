@@ -103,8 +103,51 @@ async function ensureAdminColumn(): Promise<void> {
 }
 
 async function ensureSurveyTables(): Promise<void> {
-  // Prisma will handle table creation, but ensure columns exist if needed
-  // This is called after prisma schema changes
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "Survey" (
+      "id" TEXT NOT NULL,
+      "title" TEXT NOT NULL,
+      "description" TEXT NOT NULL,
+      "type" TEXT NOT NULL DEFAULT 'wellbeing',
+      "questions" TEXT NOT NULL,
+      "isActive" BOOLEAN NOT NULL DEFAULT true,
+      "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "Survey_pkey" PRIMARY KEY ("id")
+    )
+  `);
+
+  await prisma.$executeRawUnsafe(
+    `CREATE INDEX IF NOT EXISTS "Survey_type_idx" ON "Survey"("type")`
+  );
+
+  await prisma.$executeRawUnsafe(`
+    CREATE TABLE IF NOT EXISTS "SurveyResponse" (
+      "id" TEXT NOT NULL,
+      "userId" TEXT NOT NULL,
+      "surveyId" TEXT NOT NULL,
+      "responses" TEXT NOT NULL,
+      "submittedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT "SurveyResponse_pkey" PRIMARY KEY ("id"),
+      CONSTRAINT "SurveyResponse_userId_fkey"
+        FOREIGN KEY ("userId") REFERENCES "User"("id")
+        ON DELETE CASCADE
+        ON UPDATE CASCADE,
+      CONSTRAINT "SurveyResponse_surveyId_fkey"
+        FOREIGN KEY ("surveyId") REFERENCES "Survey"("id")
+        ON DELETE CASCADE
+        ON UPDATE CASCADE
+    )
+  `);
+
+  await prisma.$executeRawUnsafe(
+    `CREATE UNIQUE INDEX IF NOT EXISTS "SurveyResponse_userId_surveyId_key" ON "SurveyResponse"("userId", "surveyId")`
+  );
+
+  await prisma.$executeRawUnsafe(
+    `CREATE INDEX IF NOT EXISTS "SurveyResponse_userId_surveyId_submittedAt_idx" ON "SurveyResponse"("userId", "surveyId", "submittedAt")`
+  );
 }
 
 async function bootstrapInitialAdmin(): Promise<void> {

@@ -155,7 +155,7 @@ const SurveyPage: React.FC = () => {
               <div className="already-responded">
                 <p>
                   ✓ You have already completed this survey on{" "}
-                  {new Date(userResponse.createdAt).toLocaleDateString()}
+                  {new Date(userResponse.submittedAt).toLocaleDateString()}
                 </p>
               </div>
             )}

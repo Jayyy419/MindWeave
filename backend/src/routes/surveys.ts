@@ -4,6 +4,41 @@ import { PrismaClient } from "@prisma/client";
 const router = Router();
 const prisma = new PrismaClient();
 
+function normalizeQuestions(raw: string): Array<{
+  id: string;
+  text: string;
+  type: string;
+  scale?: { min: number; max: number; minLabel?: string; maxLabel?: string };
+}> {
+  const parsed = JSON.parse(raw) as Array<Record<string, unknown>>;
+  if (!Array.isArray(parsed)) return [];
+
+  return parsed.map((question) => {
+    const responseType = String(question.responseType || question.type || "scale");
+    const scaleObject =
+      typeof question.scale === "object" && question.scale !== null
+        ? (question.scale as Record<string, unknown>)
+        : null;
+    const min = Number(question.min || scaleObject?.min || 1);
+    const max = Number(question.max || scaleObject?.max || 10);
+
+    return {
+      id: String(question.id || ""),
+      text: String(question.text || ""),
+      type: responseType,
+      scale:
+        responseType === "scale"
+          ? {
+              min,
+              max,
+              minLabel: typeof question.minLabel === "string" ? question.minLabel : undefined,
+              maxLabel: typeof question.maxLabel === "string" ? question.maxLabel : undefined,
+            }
+          : undefined,
+    };
+  });
+}
+
 // Base survey questions for wellbeing assessment
 const BASELINE_WELLBEING_SURVEY = {
   title: "Baseline Wellbeing Assessment",
@@ -99,7 +134,7 @@ router.get("/", async (req: Request, res: Response): Promise<void> => {
         description: survey.description,
         type: survey.type,
         isActive: survey.isActive,
-        questions: JSON.parse(survey.questions),
+        questions: normalizeQuestions(survey.questions),
       }))
     );
   } catch (error) {
@@ -127,7 +162,7 @@ router.get("/:id", async (req: Request, res: Response): Promise<void> => {
       title: survey.title,
       description: survey.description,
       type: survey.type,
-      questions: JSON.parse(survey.questions),
+      questions: normalizeQuestions(survey.questions),
     });
   } catch (error) {
     console.error("Get survey error:", error);
@@ -185,7 +220,10 @@ router.post("/:id/responses", async (req: Request, res: Response): Promise<void>
     res.status(201).json({
       id: surveyResponse.id,
       surveyId: surveyResponse.surveyId,
+      userId: surveyResponse.userId,
+      responses: JSON.parse(surveyResponse.responses),
       submittedAt: surveyResponse.submittedAt,
+      updatedAt: surveyResponse.updatedAt,
     });
   } catch (error) {
     console.error("Submit response error:", error);
@@ -220,8 +258,11 @@ router.get("/:id/responses", async (req: Request, res: Response): Promise<void> 
 
     res.json({
       id: response.id,
+      surveyId: response.surveyId,
+      userId: response.userId,
       responses: JSON.parse(response.responses),
       submittedAt: response.submittedAt,
+      updatedAt: response.updatedAt,
     });
   } catch (error) {
     console.error("Get response error:", error);

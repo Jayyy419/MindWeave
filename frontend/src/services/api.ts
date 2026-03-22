@@ -1273,7 +1273,7 @@ export async function getEvidencePack(): Promise<EvidencePackResponse> {
     surveyId: string;
     userId: string;
     responses: Record<string, number | string>;
-    createdAt: string;
+    submittedAt: string;
     updatedAt: string;
   }
 

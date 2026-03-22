@@ -21,7 +21,7 @@ import SurveyPage from "@/pages/SurveyPage";
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user } = useUser();
-  if (!user?.isAdmin) return <Navigate to="/" replace />;
+  if (user?.isAdmin !== true) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
 

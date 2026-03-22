@@ -8,6 +8,26 @@ type AuthUser = {
   isAdmin?: boolean;
 };
 
+function normalizeAuthUser(value: unknown): AuthUser | null {
+  if (!value || typeof value !== "object") return null;
+
+  const candidate = value as Record<string, unknown>;
+  if (
+    typeof candidate.id !== "string" ||
+    typeof candidate.email !== "string" ||
+    typeof candidate.username !== "string"
+  ) {
+    return null;
+  }
+
+  return {
+    id: candidate.id,
+    email: candidate.email,
+    username: candidate.username,
+    isAdmin: candidate.isAdmin === true,
+  };
+}
+
 type AuthContextType = {
   token: string | null;
   user: AuthUser | null;
@@ -28,7 +48,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     if (!raw) return null;
 
     try {
-      return JSON.parse(raw) as AuthUser;
+      const parsed = normalizeAuthUser(JSON.parse(raw));
+      if (!parsed) {
+        localStorage.removeItem(USER_KEY);
+        return null;
+      }
+      return parsed;
     } catch {
       localStorage.removeItem(USER_KEY);
       return null;
@@ -46,7 +71,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           id: profile.id,
           email: profile.email,
           username: profile.username,
-          isAdmin: profile.isAdmin,
+          isAdmin: profile.isAdmin === true,
         };
 
         setUser((current) => {
@@ -70,10 +95,17 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   }, [token, user]);
 
   function setSession(nextToken: string, nextUser: AuthUser) {
+    const normalizedNextUser: AuthUser = {
+      id: nextUser.id,
+      email: nextUser.email,
+      username: nextUser.username,
+      isAdmin: nextUser.isAdmin === true,
+    };
+
     setToken(nextToken);
-    setUser(nextUser);
+    setUser(normalizedNextUser);
     localStorage.setItem(TOKEN_KEY, nextToken);
-    localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
+    localStorage.setItem(USER_KEY, JSON.stringify(normalizedNextUser));
   }
 
   function logout() {

@@ -24,7 +24,7 @@ export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
-  const visibleNavItems = getNavItems(!!user?.isAdmin);
+  const visibleNavItems = getNavItems(user?.isAdmin === true);
 
   const initials = useMemo(() => {
     if (!user?.username) return "MW";

@@ -388,6 +388,100 @@ export interface LearningEffectivenessMetrics {
   lessonCompletionSharePercent: number;
 }
 
+export interface AdminRoleAssignmentRecord {
+  id: string;
+  userId: string;
+  role: string;
+  scope: string;
+  assignedByUserId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  email: string | null;
+  username: string | null;
+}
+
+export interface AbVariant {
+  key: string;
+  weight: number;
+  message?: string;
+}
+
+export interface AbTestExperiment {
+  id: string;
+  name: string;
+  channel: string;
+  status: "active" | "paused" | "completed";
+  createdByUserId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  variants: AbVariant[];
+}
+
+export interface AiAuditSummary {
+  totals: {
+    totalCalls: number;
+    successCalls: number;
+    flaggedCalls: number;
+    totalEstimatedTokens: number;
+  };
+  byRoute: Array<{
+    route: string;
+    count: number;
+    successCount: number;
+  }>;
+}
+
+export interface CostMonitoringSummary {
+  totals: {
+    totalCostUsd: number;
+    totalInputTokens: number;
+    totalOutputTokens: number;
+    costPerActiveUser30d: number;
+  };
+  activeUsers30d: number;
+  monthly: Array<{
+    month: string;
+    costUsd: number;
+  }>;
+  byCategory: Array<{
+    category: string;
+    costUsd: number;
+  }>;
+}
+
+export interface EvidencePackResponse {
+  generatedAt: string;
+  kpiSummary: {
+    generatedAt: string;
+    learning: {
+      attempts: number;
+      averageScore: number;
+      passRatePercent: number;
+    };
+    campaigns: {
+      campaignCount: number;
+      targetReach: number;
+      currentReach: number;
+      funnelImpressions: number;
+      funnelScans: number;
+      funnelSignups: number;
+      funnelActiveUsers: number;
+      funnelCompletions: number;
+    };
+    ai: {
+      totalCalls: number;
+      successCalls: number;
+      flaggedCalls: number;
+    };
+    costs: {
+      totalCostUsd: number;
+    };
+  };
+  export: {
+    kpiCsv: string;
+  };
+}
+
 // ── Profile Types ──
 
 export interface UserProfile {
@@ -1043,6 +1137,117 @@ export async function getImpactDashboard(): Promise<ImpactDashboard> {
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
     throw new Error(err.error || "Failed to load impact dashboard");
+  }
+  return res.json();
+}
+
+export async function listAdminRoleAssignments(): Promise<{ roles: AdminRoleAssignmentRecord[] }> {
+  const res = await fetch(`${API_BASE_URL}/impact/rbac/roles`, { headers: headers() });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to load role assignments");
+  }
+  return res.json();
+}
+
+export async function upsertAdminRoleAssignment(data: {
+  userId: string;
+  role: string;
+  scope: string;
+}): Promise<{ message: string; userId: string; role: string; scope: string }> {
+  const res = await fetch(`${API_BASE_URL}/impact/rbac/roles`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to assign role");
+  }
+  return res.json();
+}
+
+export async function listAbTests(): Promise<{ experiments: AbTestExperiment[] }> {
+  const res = await fetch(`${API_BASE_URL}/impact/ab-tests`, { headers: headers() });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to load A/B tests");
+  }
+  return res.json();
+}
+
+export async function createAbTest(data: {
+  name: string;
+  channel: string;
+  status?: "active" | "paused" | "completed";
+  variants: AbVariant[];
+}): Promise<AbTestExperiment> {
+  const res = await fetch(`${API_BASE_URL}/impact/ab-tests`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to create A/B test");
+  }
+  return res.json();
+}
+
+export async function assignAbVariant(
+  experimentId: string,
+  subjectKey: string
+): Promise<{ experimentId: string; variant: string; assignmentId: string; isNew: boolean }> {
+  const res = await fetch(`${API_BASE_URL}/impact/ab-tests/${encodeURIComponent(experimentId)}/assign`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify({ subjectKey }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to assign A/B variant");
+  }
+  return res.json();
+}
+
+export async function getAbTestSummary(experimentId: string): Promise<{
+  experimentId: string;
+  totals: { assignments: number; exposures: number };
+  variants: Array<{ variantKey: string; assignmentCount: number; exposureCount: number }>;
+}> {
+  const res = await fetch(`${API_BASE_URL}/impact/ab-tests/${encodeURIComponent(experimentId)}/summary`, {
+    headers: headers(),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to load A/B test summary");
+  }
+  return res.json();
+}
+
+export async function getAiAuditSummary(): Promise<AiAuditSummary> {
+  const res = await fetch(`${API_BASE_URL}/impact/ai-audit-summary`, { headers: headers() });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to load AI audit summary");
+  }
+  return res.json();
+}
+
+export async function getCostMonitoring(): Promise<CostMonitoringSummary> {
+  const res = await fetch(`${API_BASE_URL}/impact/cost-monitoring`, { headers: headers() });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to load cost monitoring");
+  }
+  return res.json();
+}
+
+export async function getEvidencePack(): Promise<EvidencePackResponse> {
+  const res = await fetch(`${API_BASE_URL}/impact/evidence-pack`, { headers: headers() });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || "Failed to build evidence pack");
   }
   return res.json();
 }

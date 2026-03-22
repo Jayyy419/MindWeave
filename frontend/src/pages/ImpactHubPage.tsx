@@ -4,21 +4,44 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   addOutreachTouchpoint,
+  assignAbVariant,
+  createAbTest,
   createOutreachCampaign,
+  getAbTestSummary,
+  getAiAuditSummary,
+  getCostMonitoring,
+  getEvidencePack,
   getFollowUpReminders,
   getImpactDashboard,
   getImpactProfile,
   getLearningEffectiveness,
+  listAbTests,
+  listAdminRoleAssignments,
   listAseanEvidence,
   listBeneficiaryGroups,
   listOutreachCampaigns,
   submitCampaignFunnelMetric,
   submitOutcomeSurvey,
   updateBeneficiaryGroup,
+  upsertAdminRoleAssignment,
+  type AbTestExperiment,
+  type AdminRoleAssignmentRecord,
+  type AiAuditSummary,
   type BeneficiaryGroup,
+  type CostMonitoringSummary,
   type OutreachCampaign,
 } from "@/services/api";
-import { Loader2, Megaphone, Target, TrendingUp } from "lucide-react";
+import {
+  Bot,
+  DollarSign,
+  Download,
+  FlaskConical,
+  Loader2,
+  Megaphone,
+  ShieldCheck,
+  Target,
+  TrendingUp,
+} from "lucide-react";
 
 const LABELS: Record<BeneficiaryGroup, string> = {
   "secondary-students": "Secondary students",
@@ -28,12 +51,24 @@ const LABELS: Record<BeneficiaryGroup, string> = {
   "community-youth": "Community youth",
 };
 
+const ADMIN_SCOPES = ["impact.read", "impact.write", "impact.export", "campaign.manage", "governance.manage"];
+const DEFAULT_VARIANTS = `control:60\nexpanded_copy:40`;
+
+type AbSummary = {
+  totals: { assignments: number; exposures: number };
+  variants: Array<{ variantKey: string; assignmentCount: number; exposureCount: number }>;
+};
+
 export function ImpactHubPage() {
   const [loading, setLoading] = useState(true);
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingSurvey, setSavingSurvey] = useState(false);
   const [savingCampaign, setSavingCampaign] = useState(false);
   const [savingTouchpointId, setSavingTouchpointId] = useState<string | null>(null);
+  const [savingRole, setSavingRole] = useState(false);
+  const [savingAbTest, setSavingAbTest] = useState(false);
+  const [assigningExperimentId, setAssigningExperimentId] = useState<string | null>(null);
+  const [downloadingEvidence, setDownloadingEvidence] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -41,6 +76,12 @@ export function ImpactHubPage() {
   const [beneficiaryGroup, setBeneficiaryGroup] = useState<BeneficiaryGroup>("university-students");
   const [evidence, setEvidence] = useState<Array<{ id: string; title: string; detail: string; sourceLabel: string }>>([]);
   const [campaigns, setCampaigns] = useState<OutreachCampaign[]>([]);
+  const [roleAssignments, setRoleAssignments] = useState<AdminRoleAssignmentRecord[]>([]);
+  const [abExperiments, setAbExperiments] = useState<AbTestExperiment[]>([]);
+  const [abSummaryByExperiment, setAbSummaryByExperiment] = useState<Record<string, AbSummary>>({});
+  const [aiAuditSummary, setAiAuditSummary] = useState<AiAuditSummary | null>(null);
+  const [costMonitoring, setCostMonitoring] = useState<CostMonitoringSummary | null>(null);
+  const [lastEvidenceExportAt, setLastEvidenceExportAt] = useState<string | null>(null);
 
   const [dashboard, setDashboard] = useState<{
     totals: { entries: number; completedLessons: number; targetReach: number; currentReach: number };
@@ -88,6 +129,35 @@ export function ImpactHubPage() {
 
   const [touchpointForm, setTouchpointForm] = useState<Record<string, { participantCount: number; sourceNote: string }>>({});
 
+  const [roleForm, setRoleForm] = useState({
+    userId: "",
+    role: "admin",
+    scope: "impact.read",
+  });
+
+  const [abTestForm, setAbTestForm] = useState({
+    name: "",
+    channel: "impact-hub",
+    status: "active" as "active" | "paused" | "completed",
+    variantsText: DEFAULT_VARIANTS,
+  });
+
+  const [abSubjectByExperiment, setAbSubjectByExperiment] = useState<Record<string, string>>({});
+
+  function parseVariantLines(text: string): Array<{ key: string; weight: number }> {
+    return text
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const [rawKey, rawWeight] = line.split(":");
+        const key = String(rawKey || "").trim();
+        const weight = Math.max(1, Number(rawWeight || 1));
+        return { key, weight };
+      })
+      .filter((item) => item.key.length > 0);
+  }
+
   async function refreshAll() {
     const [
       groupsResponse,
@@ -97,6 +167,10 @@ export function ImpactHubPage() {
       dashboardResponse,
       followUpResponse,
       learningEffectivenessResponse,
+      rolesResponse,
+      abTestsResponse,
+      aiAuditResponse,
+      costResponse,
     ] = await Promise.all([
       listBeneficiaryGroups(),
       getImpactProfile(),
@@ -105,6 +179,10 @@ export function ImpactHubPage() {
       getImpactDashboard(),
       getFollowUpReminders(),
       getLearningEffectiveness(),
+      listAdminRoleAssignments(),
+      listAbTests(),
+      getAiAuditSummary(),
+      getCostMonitoring(),
     ]);
 
     setBeneficiaryGroups(groupsResponse.groups);
@@ -114,6 +192,18 @@ export function ImpactHubPage() {
     setDashboard(dashboardResponse);
     setFollowUpsDue(followUpResponse.due ?? []);
     setLearningEffectiveness(learningEffectivenessResponse);
+    setRoleAssignments(rolesResponse.roles ?? []);
+    setAbExperiments(abTestsResponse.experiments ?? []);
+    setAiAuditSummary(aiAuditResponse);
+    setCostMonitoring(costResponse);
+
+    const summaries = await Promise.all(
+      (abTestsResponse.experiments ?? []).map(async (experiment) => {
+        const summary = await getAbTestSummary(experiment.id);
+        return [experiment.id, { totals: summary.totals, variants: summary.variants }] as const;
+      })
+    );
+    setAbSummaryByExperiment(Object.fromEntries(summaries));
   }
 
   useEffect(() => {
@@ -196,6 +286,109 @@ export function ImpactHubPage() {
       setSuccess(`Funnel metric updated for ${stage}.`);
     } catch (err: any) {
       setError(err.message || "Failed to update funnel metric");
+    }
+  }
+
+  async function handleAssignRole() {
+    if (!roleForm.userId.trim()) {
+      setError("User ID is required for role assignment");
+      return;
+    }
+
+    setSavingRole(true);
+    setError("");
+    setSuccess("");
+    try {
+      await upsertAdminRoleAssignment({
+        userId: roleForm.userId.trim(),
+        role: roleForm.role.trim().toLowerCase(),
+        scope: roleForm.scope,
+      });
+      await refreshAll();
+      setSuccess("RBAC role assignment updated.");
+    } catch (err: any) {
+      setError(err.message || "Failed to assign RBAC role");
+    } finally {
+      setSavingRole(false);
+    }
+  }
+
+  async function handleCreateAbTest() {
+    const variants = parseVariantLines(abTestForm.variantsText);
+    if (!abTestForm.name.trim()) {
+      setError("A/B test name is required");
+      return;
+    }
+
+    if (variants.length === 0) {
+      setError("Provide at least one variant line using key:weight");
+      return;
+    }
+
+    setSavingAbTest(true);
+    setError("");
+    setSuccess("");
+    try {
+      await createAbTest({
+        name: abTestForm.name.trim(),
+        channel: abTestForm.channel.trim() || "impact-hub",
+        status: abTestForm.status,
+        variants,
+      });
+      setAbTestForm((prev) => ({ ...prev, name: "" }));
+      await refreshAll();
+      setSuccess("A/B experiment created.");
+    } catch (err: any) {
+      setError(err.message || "Failed to create A/B test");
+    } finally {
+      setSavingAbTest(false);
+    }
+  }
+
+  async function handleAssignVariant(experimentId: string) {
+    const subjectKey = (abSubjectByExperiment[experimentId] || "").trim();
+    if (!subjectKey) {
+      setError("Subject key is required to assign A/B variant");
+      return;
+    }
+
+    setAssigningExperimentId(experimentId);
+    setError("");
+    setSuccess("");
+    try {
+      const assignment = await assignAbVariant(experimentId, subjectKey);
+      const summary = await getAbTestSummary(experimentId);
+      setAbSummaryByExperiment((prev) => ({
+        ...prev,
+        [experimentId]: { totals: summary.totals, variants: summary.variants },
+      }));
+      setSuccess(`Variant '${assignment.variant}' assigned${assignment.isNew ? "" : " (existing assignment reused)"}.`);
+    } catch (err: any) {
+      setError(err.message || "Failed to assign variant");
+    } finally {
+      setAssigningExperimentId(null);
+    }
+  }
+
+  async function handleDownloadEvidencePack() {
+    setDownloadingEvidence(true);
+    setError("");
+    setSuccess("");
+    try {
+      const pack = await getEvidencePack();
+      const blob = new Blob([pack.export.kpiCsv], { type: "text/csv;charset=utf-8" });
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = `mindweave-evidence-pack-${new Date(pack.generatedAt).toISOString().slice(0, 10)}.csv`;
+      link.click();
+      URL.revokeObjectURL(objectUrl);
+      setLastEvidenceExportAt(pack.generatedAt);
+      setSuccess("Evidence pack exported as CSV.");
+    } catch (err: any) {
+      setError(err.message || "Failed to export evidence pack");
+    } finally {
+      setDownloadingEvidence(false);
     }
   }
 
@@ -484,6 +677,236 @@ export function ImpactHubPage() {
           </div>
         </CardContent>
       </Card>
+
+      <div className="grid gap-5 xl:grid-cols-2">
+        <Card className="border-violet-200/80 bg-white/90 shadow-none">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base text-stone-800">
+              <ShieldCheck className="h-4 w-4 text-violet-700" /> RBAC Governance Roles
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid gap-2 md:grid-cols-3">
+              <input
+                value={roleForm.userId}
+                onChange={(event) => setRoleForm((prev) => ({ ...prev, userId: event.target.value }))}
+                placeholder="User ID"
+                className="rounded-lg border border-violet-200 bg-white p-2.5 text-sm text-stone-800"
+              />
+              <input
+                value={roleForm.role}
+                onChange={(event) => setRoleForm((prev) => ({ ...prev, role: event.target.value }))}
+                placeholder="Role (e.g., analyst)"
+                className="rounded-lg border border-violet-200 bg-white p-2.5 text-sm text-stone-800"
+              />
+              <select
+                value={roleForm.scope}
+                onChange={(event) => setRoleForm((prev) => ({ ...prev, scope: event.target.value }))}
+                className="rounded-lg border border-violet-200 bg-white p-2.5 text-sm text-stone-800"
+              >
+                {ADMIN_SCOPES.map((scope) => (
+                  <option key={scope} value={scope}>
+                    {scope}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Button onClick={handleAssignRole} disabled={savingRole} className="bg-violet-700 text-white hover:bg-violet-800">
+              {savingRole ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}
+              Upsert Role Assignment
+            </Button>
+
+            <div className="max-h-60 space-y-2 overflow-auto rounded-xl border border-violet-100 bg-violet-50/40 p-3 text-xs text-stone-700">
+              {roleAssignments.length === 0 ? (
+                <p>No explicit scope assignments yet.</p>
+              ) : (
+                roleAssignments.slice(0, 20).map((role) => (
+                  <div key={role.id} className="rounded-lg border border-violet-100 bg-white p-2">
+                    <p className="font-medium text-stone-900">{role.username || role.email || role.userId}</p>
+                    <p>role: {role.role}</p>
+                    <p>scope: {role.scope}</p>
+                  </div>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-indigo-200/80 bg-white/90 shadow-none">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base text-stone-800">
+              <FlaskConical className="h-4 w-4 text-indigo-700" /> A/B Experiment Ops
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid gap-2 md:grid-cols-3">
+              <input
+                value={abTestForm.name}
+                onChange={(event) => setAbTestForm((prev) => ({ ...prev, name: event.target.value }))}
+                placeholder="Experiment name"
+                className="rounded-lg border border-indigo-200 bg-white p-2.5 text-sm text-stone-800"
+              />
+              <input
+                value={abTestForm.channel}
+                onChange={(event) => setAbTestForm((prev) => ({ ...prev, channel: event.target.value }))}
+                placeholder="Channel"
+                className="rounded-lg border border-indigo-200 bg-white p-2.5 text-sm text-stone-800"
+              />
+              <select
+                value={abTestForm.status}
+                onChange={(event) =>
+                  setAbTestForm((prev) => ({ ...prev, status: event.target.value as "active" | "paused" | "completed" }))
+                }
+                className="rounded-lg border border-indigo-200 bg-white p-2.5 text-sm text-stone-800"
+              >
+                <option value="active">active</option>
+                <option value="paused">paused</option>
+                <option value="completed">completed</option>
+              </select>
+            </div>
+
+            <textarea
+              value={abTestForm.variantsText}
+              onChange={(event) => setAbTestForm((prev) => ({ ...prev, variantsText: event.target.value }))}
+              rows={3}
+              className="w-full rounded-lg border border-indigo-200 bg-white p-2.5 text-xs text-stone-800"
+            />
+            <p className="text-xs text-stone-600">Variants format: one per line, key:weight (example: control:60).</p>
+
+            <Button onClick={handleCreateAbTest} disabled={savingAbTest} className="bg-indigo-700 text-white hover:bg-indigo-800">
+              {savingAbTest ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}
+              Create Experiment
+            </Button>
+
+            <div className="max-h-72 space-y-2 overflow-auto rounded-xl border border-indigo-100 bg-indigo-50/40 p-3 text-xs text-stone-700">
+              {abExperiments.length === 0 ? (
+                <p>No A/B experiments yet.</p>
+              ) : (
+                abExperiments.map((experiment) => {
+                  const summary = abSummaryByExperiment[experiment.id];
+                  return (
+                    <div key={experiment.id} className="rounded-lg border border-indigo-100 bg-white p-2">
+                      <p className="font-medium text-stone-900">{experiment.name}</p>
+                      <p>channel: {experiment.channel}</p>
+                      <p>status: {experiment.status}</p>
+                      <p>
+                        totals: {summary?.totals.assignments ?? 0} assignments / {summary?.totals.exposures ?? 0} exposures
+                      </p>
+                      <p className="mt-1 text-[11px] text-stone-600">
+                        variants: {experiment.variants.map((variant) => `${variant.key} (${variant.weight})`).join(", ")}
+                      </p>
+                      <div className="mt-2 grid gap-2 md:grid-cols-[1fr_auto]">
+                        <input
+                          value={abSubjectByExperiment[experiment.id] ?? ""}
+                          onChange={(event) =>
+                            setAbSubjectByExperiment((prev) => ({ ...prev, [experiment.id]: event.target.value }))
+                          }
+                          placeholder="subjectKey (e.g., user-id)"
+                          className="rounded-lg border border-indigo-200 bg-white p-2 text-xs text-stone-800"
+                        />
+                        <Button
+                          size="sm"
+                          onClick={() => handleAssignVariant(experiment.id)}
+                          disabled={assigningExperimentId === experiment.id}
+                          className="bg-indigo-700 text-white hover:bg-indigo-800"
+                        >
+                          {assigningExperimentId === experiment.id ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : null}
+                          Assign
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-2">
+        <Card className="border-rose-200/80 bg-white/90 shadow-none">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base text-stone-800">
+              <Bot className="h-4 w-4 text-rose-700" /> AI Governance Audit
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-stone-700">
+            <div className="rounded-xl border border-rose-100 bg-rose-50/40 p-3">
+              <p>Total AI calls: {aiAuditSummary?.totals.totalCalls ?? 0}</p>
+              <p>Successful calls: {aiAuditSummary?.totals.successCalls ?? 0}</p>
+              <p>Flagged outcomes: {aiAuditSummary?.totals.flaggedCalls ?? 0}</p>
+              <p>Estimated tokens: {aiAuditSummary?.totals.totalEstimatedTokens ?? 0}</p>
+            </div>
+            <div className="max-h-52 space-y-1 overflow-auto rounded-xl border border-rose-100 bg-white p-3 text-xs text-stone-700">
+              {(aiAuditSummary?.byRoute ?? []).length === 0 ? (
+                <p>No route-level AI audit data yet.</p>
+              ) : (
+                aiAuditSummary?.byRoute.map((item) => (
+                  <p key={item.route}>
+                    {item.route}: {item.successCount}/{item.count} success
+                  </p>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-lime-200/80 bg-white/90 shadow-none">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base text-stone-800">
+              <DollarSign className="h-4 w-4 text-lime-700" /> Cost Monitoring And Evidence Export
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm text-stone-700">
+            <div className="rounded-xl border border-lime-100 bg-lime-50/40 p-3">
+              <p>Total estimated cost: ${Number(costMonitoring?.totals.totalCostUsd ?? 0).toFixed(4)}</p>
+              <p>Input tokens: {costMonitoring?.totals.totalInputTokens ?? 0}</p>
+              <p>Output tokens: {costMonitoring?.totals.totalOutputTokens ?? 0}</p>
+              <p>30d active users: {costMonitoring?.activeUsers30d ?? 0}</p>
+              <p>Cost per 30d active user: ${Number(costMonitoring?.totals.costPerActiveUser30d ?? 0).toFixed(4)}</p>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="rounded-xl border border-lime-100 bg-white p-3">
+                <p className="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-stone-600">Monthly</p>
+                {(costMonitoring?.monthly ?? []).length === 0 ? (
+                  <p className="text-xs text-stone-600">No monthly cost rows yet.</p>
+                ) : (
+                  costMonitoring?.monthly.map((row) => (
+                    <p key={row.month} className="text-xs text-stone-700">
+                      {new Date(row.month).toLocaleDateString(undefined, { month: "short", year: "numeric" })}: ${Number(row.costUsd).toFixed(4)}
+                    </p>
+                  ))
+                )}
+              </div>
+              <div className="rounded-xl border border-lime-100 bg-white p-3">
+                <p className="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-stone-600">By category</p>
+                {(costMonitoring?.byCategory ?? []).length === 0 ? (
+                  <p className="text-xs text-stone-600">No category breakdown yet.</p>
+                ) : (
+                  costMonitoring?.byCategory.map((row) => (
+                    <p key={row.category} className="text-xs text-stone-700">
+                      {row.category}: ${Number(row.costUsd).toFixed(4)}
+                    </p>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <Button
+              onClick={handleDownloadEvidencePack}
+              disabled={downloadingEvidence}
+              className="bg-lime-700 text-white hover:bg-lime-800"
+            >
+              {downloadingEvidence ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Download className="mr-1 h-4 w-4" />}
+              Download Evidence CSV
+            </Button>
+            <p className="text-xs text-stone-600">
+              Last export: {lastEvidenceExportAt ? new Date(lastEvidenceExportAt).toLocaleString() : "Not exported yet"}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

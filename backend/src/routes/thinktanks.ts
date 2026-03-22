@@ -6,12 +6,106 @@ import { writeAiAuditLog } from "../services/governance";
 const router = Router();
 const prisma = new PrismaClient();
 
+const JAY_DEMO_USERNAME = "jay";
+const JAY_DEMO_TANK_NAME = "Mindful Living";
+
+function isJayDemoUser(username: string | null | undefined): boolean {
+  return (username || "").trim().toLowerCase() === JAY_DEMO_USERNAME;
+}
+
+async function ensureJayDemoThinkTankData(userId: string): Promise<void> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { username: true },
+  });
+
+  if (!isJayDemoUser(user?.username)) {
+    return;
+  }
+
+  const demoTank = await prisma.thinkTank.findFirst({ where: { name: JAY_DEMO_TANK_NAME } });
+  if (!demoTank) {
+    return;
+  }
+
+  const membership = await prisma.membership.findUnique({
+    where: {
+      userId_thinkTankId: {
+        userId,
+        thinkTankId: demoTank.id,
+      },
+    },
+  });
+
+  if (!membership) {
+    await prisma.membership.create({
+      data: {
+        userId,
+        thinkTankId: demoTank.id,
+      },
+    });
+  }
+
+  const existingCount = await prisma.message.count({
+    where: {
+      thinkTankId: demoTank.id,
+    },
+  });
+
+  if (existingCount === 0) {
+    await prisma.message.create({
+      data: {
+        thinkTankId: demoTank.id,
+        userId,
+        role: "user",
+        usernameSnapshot: "jay",
+        content:
+          "Hey team, I am preparing for the ASEAN youth challenge walkthrough. Can we align on how to present wellbeing impact clearly?",
+      },
+    });
+
+    await prisma.message.create({
+      data: {
+        thinkTankId: demoTank.id,
+        role: "bot",
+        usernameSnapshot: "MindWeave Bot",
+        content:
+          "Great prompt, Jay. A strong walkthrough flow is: 1) problem context 2) emotional support mechanism 3) measurable outcomes from surveys and learning completion.",
+      },
+    });
+
+    await prisma.message.create({
+      data: {
+        thinkTankId: demoTank.id,
+        role: "user",
+        usernameSnapshot: "Alina",
+        content:
+          "I can cover the user story and why cultural tone settings matter for trust and adoption.",
+      },
+    });
+
+    await prisma.message.create({
+      data: {
+        thinkTankId: demoTank.id,
+        role: "bot",
+        usernameSnapshot: "MindWeave Bot",
+        content:
+          "Nice. Pair that with one concrete metric (for example, stress delta trend) so judges see both empathy and evidence.",
+      },
+    });
+  }
+}
+
 /**
  * GET /api/thinktanks
  * List all predefined think tanks.
  */
-router.get("/", async (_req: Request, res: Response): Promise<void> => {
+router.get("/", async (req: Request, res: Response): Promise<void> => {
+  const userId = (req as any).userId as string;
+
   try {
+    await ensureJayDemoThinkTankData(userId);
+
     const tanks = await prisma.thinkTank.findMany({
       include: {
         memberships: {
@@ -27,6 +121,7 @@ router.get("/", async (_req: Request, res: Response): Promise<void> => {
       tags: JSON.parse(t.tags),
       maxMembers: t.maxMembers,
       memberCount: t.memberships.length,
+      isJoined: t.memberships.some((m) => m.userId === userId),
     }));
 
     res.json(result);
@@ -47,9 +142,18 @@ router.get(
     const userId = (req as any).userId as string;
 
     try {
+      await ensureJayDemoThinkTankData(userId);
+
       // Check if user has enough entries
       const entryCount = await prisma.entry.count({ where: { userId } });
-      if (entryCount < 3) {
+      const currentUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { username: true, tags: true },
+      });
+
+      const isJayDemo = isJayDemoUser(currentUser?.username);
+
+      if (entryCount < 3 && !isJayDemo) {
         res.json({
           message:
             "Write at least 3 journal entries to unlock think tank matching.",
@@ -59,12 +163,11 @@ router.get(
       }
 
       // Get user's tags
-      const user = await prisma.user.findUnique({ where: { id: userId } });
-      if (!user) {
+      if (!currentUser) {
         res.status(404).json({ error: "User not found" });
         return;
       }
-      const userTags: string[] = JSON.parse(user.tags);
+      const userTags: string[] = JSON.parse(currentUser.tags);
 
       // Get all think tanks
       const tanks = await prisma.thinkTank.findMany({
@@ -79,6 +182,9 @@ router.get(
       const available = tanks
         .filter((tank) => {
           const tankTags: string[] = JSON.parse(tank.tags);
+          if (isJayDemo && tank.name === JAY_DEMO_TANK_NAME) {
+            return true;
+          }
           return tankTags.some((tag) => userTags.includes(tag));
         })
         .map((t) => ({
@@ -92,7 +198,12 @@ router.get(
           isJoined: t.memberships.some((m) => m.userId === userId),
         }));
 
-      res.json({ available });
+      res.json({
+        message: isJayDemo
+          ? "Demo profile active for Jay: Think Tank match and facilitator chat are preloaded for walkthrough."
+          : undefined,
+        available,
+      });
     } catch (error) {
       console.error("Error fetching available tanks:", error);
       res.status(500).json({ error: "Failed to fetch available think tanks" });
@@ -109,6 +220,8 @@ router.get("/:id", async (req: Request, res: Response): Promise<void> => {
   const userId = (req as any).userId as string;
 
   try {
+    await ensureJayDemoThinkTankData(userId);
+
     const tank = await prisma.thinkTank.findUnique({
       where: { id },
       include: {
@@ -131,19 +244,50 @@ router.get("/:id", async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { username: true },
+    });
+    const isJayDemo = isJayDemoUser(currentUser?.username) && tank.name === JAY_DEMO_TANK_NAME;
+
+    const demoMembers = isJayDemo
+      ? [
+          {
+            userId: "demo-alina",
+            username: "alina",
+            level: 21,
+            joinedAt: new Date("2026-02-11T10:00:00.000Z"),
+          },
+          {
+            userId: "demo-faris",
+            username: "faris",
+            level: 19,
+            joinedAt: new Date("2026-02-14T10:00:00.000Z"),
+          },
+        ]
+      : [];
+
+    const liveMembers = tank.memberships.map((m) => ({
+      userId: m.user.id,
+      username: m.user.username || `User-${m.user.id.substring(0, 6)}`,
+      level: m.user.level,
+      joinedAt: m.joinedAt,
+    }));
+
+    const seenUserIds = new Set(liveMembers.map((member) => member.userId));
+    const mergedMembers = [
+      ...liveMembers,
+      ...demoMembers.filter((member) => !seenUserIds.has(member.userId)),
+    ];
+
     res.json({
       id: tank.id,
       name: tank.name,
       description: tank.description,
       tags: JSON.parse(tank.tags),
       maxMembers: tank.maxMembers,
-      members: tank.memberships.map((m) => ({
-        userId: m.user.id,
-        username: m.user.username || `User-${m.user.id.substring(0, 6)}`,
-        level: m.user.level,
-        joinedAt: m.joinedAt,
-      })),
-      isJoined: tank.memberships.some((m) => m.userId === userId),
+      members: mergedMembers,
+      isJoined: tank.memberships.some((m) => m.userId === userId) || isJayDemo,
     });
   } catch (error) {
     console.error("Error fetching think tank:", error);
@@ -211,6 +355,20 @@ router.get("/:id/messages", async (req: Request, res: Response): Promise<void> =
   const id = req.params.id as string;
 
   try {
+    await ensureJayDemoThinkTankData(userId);
+
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { username: true },
+    });
+
+    const tank = await prisma.thinkTank.findUnique({
+      where: { id },
+      select: { name: true },
+    });
+
+    const isJayDemo = isJayDemoUser(currentUser?.username) && tank?.name === JAY_DEMO_TANK_NAME;
+
     const membership = await prisma.membership.findUnique({
       where: {
         userId_thinkTankId: {
@@ -220,7 +378,7 @@ router.get("/:id/messages", async (req: Request, res: Response): Promise<void> =
       },
     });
 
-    if (!membership) {
+    if (!membership && !isJayDemo) {
       res.status(403).json({ error: "Join this think tank before accessing chat" });
       return;
     }
@@ -266,11 +424,20 @@ router.post("/:id/messages", async (req: Request, res: Response): Promise<void> 
   }
 
   try {
+    await ensureJayDemoThinkTankData(userId);
+
     const tank = await prisma.thinkTank.findUnique({ where: { id } });
     if (!tank) {
       res.status(404).json({ error: "Think tank not found" });
       return;
     }
+
+    const currentUser = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { username: true },
+    });
+
+    const isJayDemo = isJayDemoUser(currentUser?.username) && tank.name === JAY_DEMO_TANK_NAME;
 
     const membership = await prisma.membership.findUnique({
       where: {
@@ -281,7 +448,7 @@ router.post("/:id/messages", async (req: Request, res: Response): Promise<void> 
       },
     });
 
-    if (!membership) {
+    if (!membership && !isJayDemo) {
       res.status(403).json({ error: "Join this think tank before sending messages" });
       return;
     }

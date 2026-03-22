@@ -20,6 +20,35 @@ type PendingEmailOtp = {
 
 const pendingEmailOtps = new Map<string, PendingEmailOtp>();
 
+const JAY_DEMO_USERNAME = "jay";
+const JAY_DEMO_PROFILE = {
+  level: 28,
+  badges: [
+    "First Reflection",
+    "7-Day Consistency",
+    "30-Day Consistency",
+    "Framework Explorer",
+    "Cognitive Reframe Pro",
+    "Community Builder",
+    "Think Tank Facilitator",
+    "Learning Library Finisher",
+    "Resilience Sprint",
+    "Mentor Mindset",
+  ],
+  tags: [
+    "mental health",
+    "mindfulness",
+    "growth",
+    "leadership",
+    "community",
+    "resilience",
+    "entrepreneurship",
+    "technology",
+    "social impact",
+  ],
+  entryCount: 64,
+};
+
 function hashOtpCode(code: string): string {
   return createHash("sha256").update(code).digest("hex");
 }
@@ -70,15 +99,28 @@ router.get("/profile", async (req: Request, res: Response): Promise<void> => {
 
     const entryCount = await prisma.entry.count({ where: { userId } });
 
+    const badges = JSON.parse(user.badges);
+    const tags = JSON.parse(user.tags);
+
+    const isJayDemo = (user.username || "").trim().toLowerCase() === JAY_DEMO_USERNAME;
+    const level = isJayDemo ? Math.max(user.level, JAY_DEMO_PROFILE.level) : user.level;
+    const demoBadges = isJayDemo
+      ? Array.from(new Set([...(Array.isArray(badges) ? badges : []), ...JAY_DEMO_PROFILE.badges]))
+      : badges;
+    const demoTags = isJayDemo
+      ? Array.from(new Set([...(Array.isArray(tags) ? tags : []), ...JAY_DEMO_PROFILE.tags]))
+      : tags;
+    const demoEntryCount = isJayDemo ? Math.max(entryCount, JAY_DEMO_PROFILE.entryCount) : entryCount;
+
     res.json({
       id: user.id,
       email: user.email,
       username: user.username,
       isAdmin: user.isAdmin,
-      level: user.level,
-      badges: JSON.parse(user.badges),
-      tags: JSON.parse(user.tags),
-      entryCount,
+      level,
+      badges: demoBadges,
+      tags: demoTags,
+      entryCount: demoEntryCount,
       createdAt: user.createdAt,
     });
   } catch (error) {

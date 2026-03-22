@@ -286,12 +286,6 @@ export function HomePage() {
     () => FRAMEWORKS.filter((item) => item.category === "therapeutic"),
     []
   );
-  const selectedCulturalFrameworkLabel = useMemo(() => {
-    if (!preferredCulturalFramework) return "None selected";
-    const frameworkDefinition = FRAMEWORKS.find((item) => item.value === preferredCulturalFramework);
-    return frameworkDefinition?.label ?? preferredCulturalFramework;
-  }, [preferredCulturalFramework]);
-
   const committedUserText = useMemo(
     () => chunks.map((chunk) => chunk.userText).join("\n\n"),
     [chunks]
@@ -817,22 +811,6 @@ export function HomePage() {
               )}
             </div>
 
-            <div className="rounded-2xl border border-indigo-200/80 bg-indigo-50/60 p-4">
-              <label className="mb-2 block text-sm font-medium text-stone-700">Cultural context tuning</label>
-              <p className="text-xs text-stone-700">
-                Overlay: <span className="font-semibold">{selectedCulturalFrameworkLabel}</span>
-              </p>
-              <p className="mt-1 text-xs text-stone-700">
-                Tone: <span className="font-semibold capitalize">{preferredCulturalToneStrength}</span>
-              </p>
-              <p className="mt-2 text-xs text-stone-500">
-                This is configured in Settings and applied automatically during reframing.
-              </p>
-              <Link to="/settings" className="mt-3 inline-block text-xs font-medium text-indigo-700 hover:text-indigo-800">
-                Open Settings to change cultural overlay
-              </Link>
-            </div>
-
             <div className="rounded-2xl border border-amber-200/80 bg-white/75 p-4">
               <label className="mb-2 block text-sm font-medium text-stone-700">
                 Live reframe countdown
@@ -855,6 +833,12 @@ export function HomePage() {
               </Select>
               <p className="mt-2 text-xs text-stone-500">
                 Choose how long to pause after typing before auto-reframing starts. Press Enter to fast-forward reframing instantly. Use Shift+Enter for a new line.
+              </p>
+              <p className="mt-2 text-xs text-indigo-700/90">
+                Cultural tone and regional framework are configured in Settings and applied automatically.
+                <Link to="/settings" className="ml-1 font-semibold hover:text-indigo-800">
+                  Change in Settings
+                </Link>
               </p>
             </div>
 

@@ -98,6 +98,9 @@ function buildCourse(seed: LessonSeed): LearningCourseStep[] {
           body: [
             `This lesson trains ${seed.mapLabel} so you can respond instead of react when stress rises.`,
             "You are not trying to force positive thinking. You are training accurate thinking, emotional literacy, and behavior experiments.",
+            "In practical terms, this framework helps you reduce avoidable stress costs: less mental replay, fewer relationship flare-ups, and faster recovery when setbacks happen.",
+            "When practiced consistently, this skill improves academic and team performance because your attention is no longer consumed by distorted interpretation loops.",
+            "Treat this as a trainable system, not a personality trait. The goal is reliable execution under pressure, not perfect emotional control.",
           ],
         },
         {
@@ -106,6 +109,9 @@ function buildCourse(seed: LessonSeed): LearningCourseStep[] {
             `Trigger example: ${seed.triggerExample}`,
             `Automatic pattern: ${seed.distortedThought}`,
             "The first thought feels true because it is fast, emotional, and familiar. Skill-building starts by slowing it down and testing it.",
+            "Notice sequence timing: trigger -> body signal -> fast interpretation -> impulse. Most interventions fail when they start too late at the impulse stage.",
+            "Your leverage point is the interpretation layer. If you revise interpretation earlier, emotion intensity becomes more manageable and behavior gets cleaner.",
+            "Write down one recent chain in full detail. Specificity matters more than broad labels.",
           ],
         },
         {
@@ -113,6 +119,10 @@ function buildCourse(seed: LessonSeed): LearningCourseStep[] {
           body: [
             `1) Notice pattern  2) Name pattern  3) Shift pattern through behavior and language using ${seed.mapLabel}.`,
             "Use short loops. Big breakthroughs usually come from repeated small corrections, not one perfect insight.",
+            "Step 1 (Notice): capture exact wording in your mind, not a summary. Literal wording exposes distortions.",
+            "Step 2 (Name): identify what is happening cognitively or emotionally. Naming creates distance and reduces fusion with the thought.",
+            "Step 3 (Shift): replace with a balanced line and one behavior choice that can be executed today.",
+            "Review your loop once daily for seven days. Repetition is what turns insight into default behavior.",
           ],
         },
         {
@@ -121,6 +131,9 @@ function buildCourse(seed: LessonSeed): LearningCourseStep[] {
             `Old thought: ${seed.distortedThought}`,
             `Balanced response: ${seed.balancedThought}`,
             "Balanced responses are specific, testable, and compassionate. They reduce overwhelm and improve decision quality.",
+            "A weak reframe sounds generic and motivational. A strong reframe sounds precise, grounded, and linked to real evidence.",
+            "Ask: does this line reduce panic without denying the challenge? If yes, it is likely usable in real life.",
+            "Then convert the reframe into one immediate action. Action is what confirms the updated belief.",
           ],
         },
         {
@@ -128,6 +141,39 @@ function buildCourse(seed: LessonSeed): LearningCourseStep[] {
           body: [
             `Try this this week: ${seed.actionExperiment}`,
             "Run the experiment, record what happened, and update your belief with evidence. Confidence grows from proof, not pressure.",
+            "Before the experiment, write a prediction with a confidence score (0-100). Afterward, write actual outcome and new confidence score.",
+            "If outcome is mixed, extract one protective factor and one improvement step. Mixed outcomes are still high-value learning data.",
+            "Schedule a repeat trial within 72 hours. Close spacing increases retention of adaptive responses.",
+          ],
+        },
+        {
+          heading: "Common mistakes and corrections",
+          body: [
+            "Mistake 1: jumping to abstract self-judgments too quickly. Correction: force concrete evidence and timelines.",
+            "Mistake 2: using reframing as emotional suppression. Correction: validate feelings first, then update interpretation.",
+            "Mistake 3: collecting only confirming evidence. Correction: require at least two disconfirming data points.",
+            "Mistake 4: no behavioral follow-through. Correction: attach every reframe to one action in the next 24 hours.",
+            "These corrections are non-negotiable if you want durable change rather than temporary relief.",
+          ],
+        },
+        {
+          heading: "Study checklist and memory anchors",
+          body: [
+            "Use this quick checklist after each lesson page: What happened? What did I tell myself? What evidence exists? What is my updated line? What is my next action?",
+            "Create one memory anchor phrase for this lesson and repeat it before stressful events. Keep it short and actionable.",
+            "Example anchor template: 'Pause, label, test, choose.' Build your own version in your preferred wording.",
+            "At the end of the week, review three entries and highlight progress signals instead of only unresolved problems.",
+            "This structured recall process improves transfer from course content to real-world execution.",
+          ],
+        },
+        {
+          heading: "Application scenarios for school, work, and relationships",
+          body: [
+            "School scenario: exam stress and self-criticism after one poor result. Apply evidence-based reinterpretation and a targeted study adjustment.",
+            "Work scenario: anxiety after critical feedback. Separate process feedback from identity conclusions and define one measurable improvement target.",
+            "Relationship scenario: delayed replies interpreted as rejection. Replace mind-reading with neutral hypotheses and direct communication.",
+            "In each scenario, you are practicing the same engine: accurate meaning-making under emotional load.",
+            "Mastery means the framework remains usable even when energy is low and pressure is high.",
           ],
         },
       ],

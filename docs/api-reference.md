@@ -653,6 +653,105 @@ Return aggregate learning assessment metrics and pre/post outcome deltas.
 
 Return totals, survey deltas, outreach funnel aggregates, and campaign progress percent.
 
+### GET /api/impact/rbac/roles
+
+List admin scope assignments.
+
+Scope requirement:
+- `governance.manage` scope (or full admin)
+
+### POST /api/impact/rbac/roles
+
+Create or update a user role/scope assignment.
+
+**Request body**
+```json
+{
+  "userId": "user-id",
+  "role": "admin",
+  "scope": "impact.read"
+}
+```
+
+Allowed scope values:
+- `impact.read`
+- `impact.write`
+- `impact.export`
+- `campaign.manage`
+- `governance.manage`
+
+Scope requirement:
+- `governance.manage` scope (or full admin)
+
+### GET /api/impact/ab-tests
+
+List A/B experiments and configured variants.
+
+Scope requirement:
+- `impact.read` scope (or full admin)
+
+### POST /api/impact/ab-tests
+
+Create a new A/B experiment.
+
+**Request body**
+```json
+{
+  "name": "Impact CTA Copy Test",
+  "channel": "impact-hub",
+  "status": "active",
+  "variants": [
+    { "key": "control", "weight": 60 },
+    { "key": "expanded_copy", "weight": 40 }
+  ]
+}
+```
+
+Scope requirement:
+- `impact.write` scope (or full admin)
+
+### POST /api/impact/ab-tests/:id/assign
+
+Assign a deterministic variant for a subject key.
+
+**Request body**
+```json
+{
+  "subjectKey": "user-123"
+}
+```
+
+Scope requirement:
+- `campaign.manage` scope (or full admin)
+
+### GET /api/impact/ab-tests/:id/summary
+
+Return assignment and exposure totals by variant.
+
+Scope requirement:
+- `impact.read` scope (or full admin)
+
+### GET /api/impact/ai-audit-summary
+
+Return AI call totals and route-level success metrics.
+
+Scope requirement:
+- `governance.manage` scope (or full admin)
+
+### GET /api/impact/cost-monitoring
+
+Return estimated cost totals, monthly trend, category breakdown, and active-user cost metrics.
+
+Scope requirement:
+- `governance.manage` scope (or full admin)
+
+### GET /api/impact/evidence-pack
+
+Return evidence export payload with KPI summary and CSV content.
+
+Scope requirement:
+- `impact.export` scope (or full admin)
+
 ---
 
 ## Health & Status

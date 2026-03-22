@@ -4,15 +4,19 @@ import { BookOpen, BookText, BriefcaseBusiness, ChevronDown, LineChart, PenLine,
 import { useUser } from "@/context/UserContext";
 import { Button } from "@/components/ui/button";
 
-const navItems = [
-  { to: "/", label: "Journal", icon: PenLine },
-  { to: "/memory-lane", label: "Memory Lane", icon: BookOpen },
-  { to: "/thinktanks", label: "Think Tanks", icon: Users },
-  { to: "/learning-library", label: "Learning Library", icon: BookText },
+
+function getNavItems(isAdmin: boolean) {
+  return [
+    { to: "/", label: "Journal", icon: PenLine },
+    { to: "/memory-lane", label: "Memory Lane", icon: BookOpen },
+    { to: "/thinktanks", label: "Think Tanks", icon: Users },
+    { to: "/learning-library", label: "Learning Library", icon: BookText },
     { to: "/surveys", label: "Surveys", icon: Compass },
-  { to: "/impact-hub", label: "Impact Hub", icon: LineChart },
-  { to: "/opportunities", label: "Opportunities", icon: BriefcaseBusiness },
-];
+    ...(isAdmin ? [{ to: "/impact-hub", label: "Impact Hub", icon: LineChart }] : []),
+    { to: "/opportunities", label: "Opportunities", icon: BriefcaseBusiness },
+  ];
+}
+
 
 export function Navbar() {
   const location = useLocation();
@@ -20,9 +24,7 @@ export function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
-  const visibleNavItems = navItems.filter(
-    (item) => item.to !== "/impact-hub" || user?.isAdmin === true
-  );
+  const visibleNavItems = getNavItems(!!user?.isAdmin);
 
   const initials = useMemo(() => {
     if (!user?.username) return "MW";

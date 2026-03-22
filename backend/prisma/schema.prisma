@@ -1,5 +1,6 @@
 // Prisma schema for MindWeave
-// PostgreSQL-ready for AWS RDS deployment
+// PostgreSQL (AWS RDS) is the required database provider
+// Local SQLite development database support has been deprecated
 
 generator client {
   provider = "prisma-client-js"

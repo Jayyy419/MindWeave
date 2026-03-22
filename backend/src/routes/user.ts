@@ -2,8 +2,8 @@ import { Router, Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { createHash, randomInt } from "crypto";
-import nodemailer from "nodemailer";
 import { adminMiddleware } from "../middleware/adminAuth";
+import { sendTrackedEmail } from "../services/email";
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -33,26 +33,9 @@ function isUsernameValid(username: string): boolean {
 }
 
 async function sendEmailOtp(email: string, otp: string): Promise<void> {
-  const host = process.env.SMTP_HOST;
-  const port = parseInt(process.env.SMTP_PORT || "587", 10);
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-  const from = process.env.SMTP_FROM || "MindWeave <no-reply@mindweave.app>";
-
-  if (!host || !user || !pass) {
-    throw new Error("SMTP configuration is missing (SMTP_HOST, SMTP_USER, SMTP_PASS)");
-  }
-
-  const transporter = nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465,
-    auth: { user, pass },
-  });
-
-  await transporter.sendMail({
-    from,
-    to: email,
+  await sendTrackedEmail(
+    {
+      to: email,
     subject: "Your MindWeave email verification code",
     text: `Your verification code is ${otp}. It expires in 10 minutes.`,
     html: `
@@ -63,7 +46,9 @@ async function sendEmailOtp(email: string, otp: string): Promise<void> {
         <p>This code expires in 10 minutes.</p>
       </div>
     `,
-  });
+    },
+    { purpose: "email-otp" }
+  );
 }
 
 /**

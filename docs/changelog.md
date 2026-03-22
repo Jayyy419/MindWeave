@@ -2,6 +2,57 @@
 
 This changelog captures the implementation history from the start of this project session through the most recent deployment.
 
+## 2026-03-22 - Phase 3 Governance, Admin Controls, and Deployment Hardening
+
+### Backend Governance and Admin APIs
+- Added governance service and runtime table-ensure support for:
+	- AI audit logs
+	- API cost ledger
+	- Admin role assignments (RBAC scopes)
+	- A/B experiments and assignments
+- Added scope-aware admin authorization support so admin routes can be protected by explicit scopes.
+- Added new Impact governance/admin endpoints:
+	- `GET /api/impact/rbac/roles`
+	- `POST /api/impact/rbac/roles`
+	- `GET /api/impact/ab-tests`
+	- `POST /api/impact/ab-tests`
+	- `POST /api/impact/ab-tests/:id/assign`
+	- `GET /api/impact/ab-tests/:id/summary`
+	- `GET /api/impact/ai-audit-summary`
+	- `GET /api/impact/cost-monitoring`
+	- `GET /api/impact/evidence-pack`
+
+### AI Governance Instrumentation
+- Added AI audit and cost logging around journaling and think tank AI paths.
+- Added input/output token estimation and cost computation using configurable environment rates:
+	- `AI_INPUT_COST_PER_MILLION`
+	- `AI_OUTPUT_COST_PER_MILLION`
+
+### Frontend Admin Integration
+- Extended Impact Hub to include governance panels for:
+	- RBAC role assignment and listing
+	- A/B experiment creation, assignment, and summary
+	- AI audit summary metrics
+	- Cost monitoring metrics and breakdowns
+	- Evidence pack CSV export
+- Added matching typed API client contracts for all new governance endpoints.
+
+### Integration Smoke Coverage
+- Expanded backend integration smoke checks to validate:
+	- non-admin access receives `403` on protected governance endpoints
+	- optional admin-success route checks when `TEST_ADMIN_TOKEN` is provided
+
+### Deployment and Operations
+- Resolved EB source-bundle rollout failures caused by Windows zip path separators by switching bundle creation to tar-generated zip archives.
+- Deployed backend version `v20260322144515` to production and confirmed `/api/health` returns `200`.
+- Set explicit production AI cost environment values:
+	- `AI_INPUT_COST_PER_MILLION=0.15`
+	- `AI_OUTPUT_COST_PER_MILLION=0.60`
+- Deployed frontend and issued CloudFront invalidation `IAHNY2PHKWOCX21L6GT4DYMSFB`.
+
+### Repository Cleanup
+- Removed generated local deployment artifacts (`backend-deploy-*.zip`, including backend-local copies) and transient `eb-tail.log` from the workspace.
+
 ## 2026-03-22 — Impact Evidence, Safety Escalation, and Outreach Funnel
 
 ### AI Explainability and Safety Escalation

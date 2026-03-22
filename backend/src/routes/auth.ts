@@ -4,7 +4,7 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { randomUUID } from "crypto";
 import { createHash, randomBytes } from "crypto";
-import nodemailer from "nodemailer";
+import { sendTrackedEmail } from "../services/email";
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -12,6 +12,9 @@ const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || "mindweave-dev-secret";
 const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || "http://localhost:5173";
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
+const MAX_FAILED_LOGIN_ATTEMPTS = parseInt(process.env.AUTH_LOCKOUT_MAX_ATTEMPTS || "5", 10);
+const AUTH_LOCKOUT_MINUTES = parseInt(process.env.AUTH_LOCKOUT_MINUTES || "15", 10);
+const LOCKOUT_WINDOW_MS = AUTH_LOCKOUT_MINUTES * 60 * 1000;
 
 type AuthBody = {
   email?: string;
@@ -22,6 +25,13 @@ type AuthBody = {
 
 const PASSWORD_POLICY_ERROR =
   "password must be at least 8 characters and include uppercase, lowercase, number, and symbol";
+
+type LoginAttemptState = {
+  failedAttempts: number;
+  lockedUntil: number;
+};
+
+const loginAttemptMap = new Map<string, LoginAttemptState>();
 
 function createToken(userId: string): string {
   return jwt.sign({ userId }, JWT_SECRET, { expiresIn: "7d" });
@@ -35,30 +45,44 @@ function isStrongPassword(password: string): boolean {
   return /[A-Z]/.test(password) && /[a-z]/.test(password) && /\d/.test(password) && /[^A-Za-z0-9]/.test(password);
 }
 
-async function sendPasswordResetEmail(email: string, resetUrl: string): Promise<void> {
-  const host = process.env.SMTP_HOST;
-  const port = parseInt(process.env.SMTP_PORT || "587", 10);
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-  const from = process.env.SMTP_FROM || "MindWeave <no-reply@mindweave.app>";
-
-  if (!host || !user || !pass) {
-    throw new Error("SMTP configuration is missing (SMTP_HOST, SMTP_USER, SMTP_PASS)");
+function getLoginAttemptState(email: string): LoginAttemptState {
+  const existing = loginAttemptMap.get(email);
+  if (!existing) {
+    return { failedAttempts: 0, lockedUntil: 0 };
   }
 
-  const transporter = nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465,
-    auth: {
-      user,
-      pass,
-    },
-  });
+  if (existing.lockedUntil > 0 && Date.now() >= existing.lockedUntil) {
+    loginAttemptMap.delete(email);
+    return { failedAttempts: 0, lockedUntil: 0 };
+  }
 
-  await transporter.sendMail({
-    from,
-    to: email,
+  return existing;
+}
+
+function registerFailedLoginAttempt(email: string): LoginAttemptState {
+  const current = getLoginAttemptState(email);
+  const nextFailedAttempts = current.failedAttempts + 1;
+
+  if (nextFailedAttempts >= MAX_FAILED_LOGIN_ATTEMPTS) {
+    const lockedUntil = Date.now() + LOCKOUT_WINDOW_MS;
+    const lockedState: LoginAttemptState = { failedAttempts: 0, lockedUntil };
+    loginAttemptMap.set(email, lockedState);
+    return lockedState;
+  }
+
+  const nextState: LoginAttemptState = { failedAttempts: nextFailedAttempts, lockedUntil: 0 };
+  loginAttemptMap.set(email, nextState);
+  return nextState;
+}
+
+function clearLoginAttempts(email: string): void {
+  loginAttemptMap.delete(email);
+}
+
+async function sendPasswordResetEmail(email: string, resetUrl: string): Promise<void> {
+  await sendTrackedEmail(
+    {
+      to: email,
     subject: "Reset your MindWeave password",
     html: `
       <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;line-height:1.5;color:#222;">
@@ -72,7 +96,9 @@ async function sendPasswordResetEmail(email: string, resetUrl: string): Promise<
       </div>
     `,
     text: `Reset your MindWeave password: ${resetUrl}\n\nThis link expires in 1 hour.`,
-  });
+    },
+    { purpose: "password-reset" }
+  );
 }
 
 router.post("/register", async (req: Request, res: Response): Promise<void> => {
@@ -141,20 +167,39 @@ router.post("/login", async (req: Request, res: Response): Promise<void> => {
   }
 
   try {
+    const normalizedEmail = email.trim().toLowerCase();
+    const attemptState = getLoginAttemptState(normalizedEmail);
+    if (attemptState.lockedUntil > Date.now()) {
+      res.status(423).json({ error: "Account temporarily locked due to repeated failed logins" });
+      return;
+    }
+
     const user = await prisma.user.findFirst({
-      where: { email: email.trim().toLowerCase() },
+      where: { email: normalizedEmail },
     });
 
     if (!user?.passwordHash) {
+      const state = registerFailedLoginAttempt(normalizedEmail);
+      if (state.lockedUntil > Date.now()) {
+        res.status(423).json({ error: "Account temporarily locked due to repeated failed logins" });
+        return;
+      }
       res.status(401).json({ error: "Invalid credentials" });
       return;
     }
 
     const isValid = await bcrypt.compare(password, user.passwordHash);
     if (!isValid) {
+      const state = registerFailedLoginAttempt(normalizedEmail);
+      if (state.lockedUntil > Date.now()) {
+        res.status(423).json({ error: "Account temporarily locked due to repeated failed logins" });
+        return;
+      }
       res.status(401).json({ error: "Invalid credentials" });
       return;
     }
+
+    clearLoginAttempts(normalizedEmail);
 
     const token = createToken(user.id);
 

@@ -1,6 +1,7 @@
 import { Router, Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import { generateChatBotReply } from "../services/gemini";
+import { writeAiAuditLog } from "../services/governance";
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -308,6 +309,21 @@ router.post("/:id/messages", async (req: Request, res: Response): Promise<void> 
           content: botReply,
         },
       });
+
+      await writeAiAuditLog({
+        userId,
+        route: "/api/thinktanks/:id/messages",
+        action: "group-chat-bot-reply",
+        model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+        moderationOutcome: "none",
+        success: true,
+        inputText: content,
+        outputText: botReply,
+        metadata: {
+          thinkTankId: id,
+          thinkTankName: tank.name,
+        },
+      });
     }
 
     res.status(201).json({
@@ -315,6 +331,22 @@ router.post("/:id/messages", async (req: Request, res: Response): Promise<void> 
       botMessage,
     });
   } catch (error) {
+    await writeAiAuditLog({
+      userId,
+      route: "/api/thinktanks/:id/messages",
+      action: "group-chat-bot-reply",
+      model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+      moderationOutcome: "unknown",
+      success: false,
+      errorCode: error instanceof Error ? error.message : "THINKTANK_MESSAGE_FAILED",
+      inputText: content,
+      metadata: {
+        thinkTankId: id,
+      },
+    }).catch((auditError) => {
+      console.warn("Failed to write AI audit log:", auditError);
+    });
+
     console.error("Error sending chat message:", error);
     res.status(500).json({ error: "Failed to send message" });
   }

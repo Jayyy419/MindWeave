@@ -3,6 +3,7 @@ import { PrismaClient } from "@prisma/client";
 import { reframeText, extractTags } from "../services/gemini";
 import { updateUserGamification } from "../services/gamification";
 import { VALID_FRAMEWORK_IDS, CULTURAL_FRAMEWORK_IDS } from "../config/frameworks";
+import { writeAiAuditLog } from "../services/governance";
 
 const router = Router();
 const prisma = new PrismaClient();
@@ -197,6 +198,7 @@ function getStoredChunks(chunksRaw: string, originalText: string, reframedText: 
  * Body: { text: string, framework: "cbt" | "iceberg" | "growth" }
  */
 router.post("/reframe-preview", async (req: Request, res: Response): Promise<void> => {
+  const userId = (req as any).userId as string;
   const { text, framework, culturalToneStrength, culturalFramework } = req.body;
 
   if (!text || typeof text !== "string" || text.trim().length === 0) {
@@ -256,6 +258,19 @@ router.post("/reframe-preview", async (req: Request, res: Response): Promise<voi
       culturalFramework,
       culturalToneStrength: parsedToneStrength,
     });
+
+    await writeAiAuditLog({
+      userId,
+      route: "/api/entries/reframe-preview",
+      action: "reframe-preview",
+      model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+      moderationOutcome: safety.level === "high" ? "flagged" : "none",
+      success: true,
+      inputText: text.trim(),
+      outputText: reframedText,
+      metadata: { framework, culturalFramework: culturalFramework || null },
+    });
+
     res.json({
       originalText: text.trim(),
       reframedText,
@@ -265,6 +280,20 @@ router.post("/reframe-preview", async (req: Request, res: Response): Promise<voi
       safety,
     });
   } catch (error) {
+    await writeAiAuditLog({
+      userId,
+      route: "/api/entries/reframe-preview",
+      action: "reframe-preview",
+      model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+      moderationOutcome: safety.level === "high" ? "flagged" : "unknown",
+      success: false,
+      errorCode: error instanceof Error ? error.message : "REFRAME_PREVIEW_FAILED",
+      inputText: text.trim(),
+      metadata: { framework, culturalFramework: culturalFramework || null },
+    }).catch((auditError) => {
+      console.warn("Failed to write AI audit log:", auditError);
+    });
+
     if (error instanceof Error && error.message === "NOT_JOURNAL_ENTRY") {
       res.status(422).json({ error: OFF_TOPIC_ERROR });
       return;
@@ -371,6 +400,22 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
       extractTags(text.trim()),
     ]);
 
+    await writeAiAuditLog({
+      userId,
+      route: "/api/entries",
+      action: "create-entry-reframe",
+      model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+      moderationOutcome: safety.level === "high" ? "flagged" : "none",
+      success: true,
+      inputText: text.trim(),
+      outputText: `${reframedText}\n${tags.join(",")}`,
+      metadata: {
+        framework,
+        culturalFramework: culturalFramework || null,
+        tagCount: tags.length,
+      },
+    });
+
     // Save entry to database
     const entry = await prisma.entry.create({
       data: {
@@ -400,6 +445,23 @@ router.post("/", async (req: Request, res: Response): Promise<void> => {
       safety,
     });
   } catch (error) {
+    await writeAiAuditLog({
+      userId,
+      route: "/api/entries",
+      action: "create-entry-reframe",
+      model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+      moderationOutcome: safety.level === "high" ? "flagged" : "unknown",
+      success: false,
+      errorCode: error instanceof Error ? error.message : "ENTRY_CREATE_AI_FAILED",
+      inputText: text.trim(),
+      metadata: {
+        framework,
+        culturalFramework: culturalFramework || null,
+      },
+    }).catch((auditError) => {
+      console.warn("Failed to write AI audit log:", auditError);
+    });
+
     if (error instanceof Error && error.message === "NOT_JOURNAL_ENTRY") {
       res.status(422).json({ error: OFF_TOPIC_ERROR });
       return;

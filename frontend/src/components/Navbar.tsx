@@ -102,6 +102,7 @@ export function Navbar() {
               DEMO MODE
             </span>
           ) : (
+          <>
           <div className="relative">
             <button
               type="button"
@@ -150,6 +151,7 @@ export function Navbar() {
           <Button variant="outline" size="sm" onClick={logout}>
             Logout
           </Button>
+          </>
           )}
         </div>
       </div>

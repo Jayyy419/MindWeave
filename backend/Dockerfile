@@ -16,8 +16,9 @@ RUN npm run build
 FROM base AS runtime
 ENV NODE_ENV=production
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
 COPY package*.json ./
 EXPOSE 3001
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"]
+CMD ["sh", "-c", "npx prisma db push --skip-generate && node dist/index.js"]

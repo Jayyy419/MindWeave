@@ -4,6 +4,8 @@
  * The Vite dev server proxies /api requests to the backend at localhost:3001.
  */
 
+import { DEMO_MODE, getDemoSessionId } from "@/config/demo";
+
 const API_BASE = "/api";
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || API_BASE;
 
@@ -14,6 +16,13 @@ function getAuthToken(): string {
 }
 
 function headers(): HeadersInit {
+  if (DEMO_MODE) {
+    return {
+      "Content-Type": "application/json",
+      "x-anonymous-id": getDemoSessionId(),
+    };
+  }
+
   const token = getAuthToken();
 
   return {

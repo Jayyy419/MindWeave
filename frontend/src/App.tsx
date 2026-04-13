@@ -17,7 +17,9 @@ import { ImpactHubPage } from "@/pages/ImpactHubPage";
 import { AdminUsersPage } from "@/pages/AdminUsersPage";
 import { AuthPage } from "@/pages/AuthPage";
 import { ResetPasswordPage } from "@/pages/ResetPasswordPage";
+import { DemoLandingPage } from "@/pages/DemoLandingPage";
 import SurveyPage from "@/pages/SurveyPage";
+import { DEMO_MODE } from "@/config/demo";
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
   const { user } = useUser();
@@ -25,8 +27,24 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function DemoRoutes() {
+  return (
+    <Routes>
+      <Route path="/" element={<DemoLandingPage />} />
+      <Route element={<Layout />}>
+        <Route path="/journal" element={<HomePage />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
+
 function AppRoutes() {
   const { isAuthenticated } = useUser();
+
+  if (DEMO_MODE) {
+    return <DemoRoutes />;
+  }
 
   if (!isAuthenticated) {
     return (

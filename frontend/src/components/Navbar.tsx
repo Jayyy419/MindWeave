@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { BookOpen, BookText, BriefcaseBusiness, ChevronDown, LineChart, PenLine, Settings, Shield, User, Users, Compass } from "lucide-react";
 import { useUser } from "@/context/UserContext";
 import { Button } from "@/components/ui/button";
+import { DEMO_MODE } from "@/config/demo";
 
 
 function getNavItems(isAdmin: boolean) {
@@ -69,6 +70,7 @@ export function Navbar() {
         </Link>
 
         {/* Navigation links */}
+        {!DEMO_MODE && (
         <nav className="flex items-center space-x-1">
           {visibleNavItems.map(({ to, label, icon: Icon }) => {
             const isActive =
@@ -92,8 +94,14 @@ export function Navbar() {
             );
           })}
         </nav>
+        )}
 
         <div className="ml-auto flex items-center gap-2" ref={menuRef}>
+          {DEMO_MODE ? (
+            <span className="inline-flex items-center rounded-full bg-purple-100 px-3 py-1 text-xs font-semibold text-purple-700">
+              DEMO MODE
+            </span>
+          ) : (
           <div className="relative">
             <button
               type="button"
@@ -142,6 +150,7 @@ export function Navbar() {
           <Button variant="outline" size="sm" onClick={logout}>
             Logout
           </Button>
+          )}
         </div>
       </div>
     </header>

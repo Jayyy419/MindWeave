@@ -21,6 +21,13 @@ import {
   type SafetySignal,
 } from "@/services/api";
 import { CalendarDays, Heart, Info, Loader2, Pencil, Trash2, X } from "lucide-react";
+import {
+  DEMO_MODE,
+  MAX_DEMO_REFRAMES,
+  getDemoRemaining,
+  incrementDemoReframeCount,
+  isDemoLimitReached,
+} from "@/config/demo";
 
 type FrameworkCategory = "therapeutic" | "cultural";
 
@@ -277,6 +284,10 @@ export function HomePage() {
   const liveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const liveCountdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  const [demoReframingRemaining, setDemoReframingRemaining] = useState(() =>
+    DEMO_MODE ? getDemoRemaining() : 0
+  );
+
   const selectedFramework = useMemo(
     () => FRAMEWORKS.find((item) => item.value === framework),
     [framework]
@@ -469,6 +480,12 @@ export function HomePage() {
       return;
     }
 
+    if (DEMO_MODE && isDemoLimitReached()) {
+      setLiveCountdown(null);
+      setLiveLoading(false);
+      return;
+    }
+
     const requestId = ++liveRequestId.current;
     const draftSnapshot = trimmedText;
 
@@ -562,6 +579,12 @@ export function HomePage() {
   async function commitLiveReframe(draftSnapshot: string, requestId: number) {
     clearLiveReframeTimers();
     setLiveCountdown(null);
+
+    if (DEMO_MODE && isDemoLimitReached()) {
+      setLiveError(`Demo limit reached (${MAX_DEMO_REFRAMES} reframes). Create a free account for unlimited access!`);
+      return;
+    }
+
     setLiveLoading(true);
     setLiveError("");
 
@@ -578,6 +601,11 @@ export function HomePage() {
 
       setLastExplainability(preview.explainability ?? null);
       setLastSafetySignal(preview.safety ?? null);
+
+      if (DEMO_MODE) {
+        incrementDemoReframeCount();
+        setDemoReframingRemaining(getDemoRemaining());
+      }
 
       setChunks((previous) => [
         ...previous,
@@ -598,6 +626,11 @@ export function HomePage() {
   }
 
   async function triggerImmediateReframe() {
+    if (DEMO_MODE && isDemoLimitReached()) {
+      setLiveError(`Demo limit reached (${MAX_DEMO_REFRAMES} reframes). Create a free account for unlimited access!`);
+      return;
+    }
+
     if (!framework) {
       setLiveError("Choose a framework before reframing.");
       return;
@@ -646,6 +679,11 @@ export function HomePage() {
   }
 
   async function saveChunkEdit(chunkId: string) {
+    if (DEMO_MODE && isDemoLimitReached()) {
+      setEditError(`Demo limit reached (${MAX_DEMO_REFRAMES} reframes). Create a free account for unlimited access!`);
+      return;
+    }
+
     if (!framework) {
       setEditError("Choose a framework before reframing edited text.");
       return;
@@ -679,6 +717,11 @@ export function HomePage() {
 
       setLastExplainability(preview.explainability ?? null);
       setLastSafetySignal(preview.safety ?? null);
+
+      if (DEMO_MODE) {
+        incrementDemoReframeCount();
+        setDemoReframingRemaining(getDemoRemaining());
+      }
 
       setChunks((previous) =>
         previous.map((chunk) =>
@@ -769,6 +812,35 @@ export function HomePage() {
   return (
     <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen min-h-[calc(100vh-7rem)] bg-[repeating-linear-gradient(to_bottom,#fffef9_0px,#fffef9_34px,#ece7dc_35px)] px-3 py-6 sm:px-5 lg:px-6">
       <div className="mx-auto max-w-[92rem] space-y-6">
+
+      {/* Demo mode banner */}
+      {DEMO_MODE && (
+        <div className="rounded-xl border border-purple-200 bg-gradient-to-r from-purple-50 to-indigo-50 px-5 py-3 text-sm shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-semibold text-purple-700">
+                DEMO
+              </span>
+              <span className="text-stone-700">
+                You're in demo mode — no account needed!
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-stone-600">
+                <strong>{demoReframingRemaining}</strong> / {MAX_DEMO_REFRAMES} reframes remaining
+              </span>
+              {demoReframingRemaining === 0 && (
+                <Link
+                  to="/"
+                  className="rounded-lg bg-purple-600 px-3 py-1 text-xs font-medium text-white hover:bg-purple-700"
+                >
+                  Create a free account
+                </Link>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
       <section className="rounded-3xl border border-amber-200/70 bg-[linear-gradient(140deg,#fff8ea_0%,#fffdf6_45%,#f6f7ee_100%)] p-6 shadow-[0_24px_60px_-32px_rgba(94,72,36,0.35)] sm:p-8">
         <div className="mb-5 flex flex-col items-center gap-3 text-center">
           <div>
@@ -1029,6 +1101,11 @@ export function HomePage() {
             {error && <p className="text-sm text-destructive">{error}</p>}
             {saveNotice && <p className="text-sm text-emerald-800">{saveNotice}</p>}
 
+            {DEMO_MODE ? (
+              <p className="text-center text-sm text-stone-500 italic">
+                Saving entries is not available in demo mode. Create a free account for the full experience!
+              </p>
+            ) : (
             <Button
               type="submit"
               className="h-11 w-full bg-emerald-700 text-emerald-50 hover:bg-emerald-800"
@@ -1043,6 +1120,7 @@ export function HomePage() {
                 "Save entry"
               )}
             </Button>
+            )}
           </form>
 
           <aside className="space-y-4">

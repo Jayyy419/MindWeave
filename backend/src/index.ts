@@ -29,6 +29,8 @@ const ENABLE_ADMIN_BOOTSTRAP = process.env.ENABLE_ADMIN_BOOTSTRAP === "true";
 const AUTH_RATE_LIMIT_WINDOW_MS = parseInt(process.env.AUTH_RATE_LIMIT_WINDOW_MS || "600000", 10);
 const AUTH_LOGIN_RATE_LIMIT_MAX = parseInt(process.env.AUTH_LOGIN_RATE_LIMIT_MAX || "10", 10);
 const AUTH_FORGOT_RATE_LIMIT_MAX = parseInt(process.env.AUTH_FORGOT_RATE_LIMIT_MAX || "5", 10);
+const DEMO_MODE = process.env.DEMO_MODE === "true";
+const DEMO_REFRAME_RATE_LIMIT_MAX = parseInt(process.env.DEMO_REFRAME_RATE_LIMIT_MAX || "10", 10);
 
 const allowedOrigins = CORS_ORIGIN.split(",")
   .map((origin) => origin.trim())
@@ -69,6 +71,12 @@ const forgotPasswordRateLimiter = createRateLimitMiddleware({
   keyPrefix: "auth-forgot-password",
 });
 
+const demoReframeRateLimiter = createRateLimitMiddleware({
+  windowMs: 3600000, // 1 hour
+  maxRequests: DEMO_REFRAME_RATE_LIMIT_MAX,
+  keyPrefix: "demo-reframe",
+});
+
 // Health check (no auth required)
 app.get("/", (_req, res) => {
   res.status(200).send("MindWeave backend is running");
@@ -88,6 +96,9 @@ app.use("/api/auth/forgot-password", forgotPasswordRateLimiter);
 app.use("/api/auth", authRouter);
 
 // All API routes require anonymous user identification
+if (DEMO_MODE) {
+  app.use("/api/entries/reframe-preview", demoReframeRateLimiter);
+}
 app.use("/api/entries", authMiddleware, entriesRouter);
 app.use("/api/user", authMiddleware, userRouter);
 app.use("/api/thinktanks", authMiddleware, thinkTanksRouter);

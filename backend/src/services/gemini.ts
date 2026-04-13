@@ -170,6 +170,7 @@ export async function reframeText(
     if (error instanceof Error && error.message === "NOT_JOURNAL_ENTRY") {
       throw error;
     }
+    console.error("Gemini reframing failed:", error);
     if (!allowFallback) {
       throw new Error("AI reframing unavailable right now");
     }

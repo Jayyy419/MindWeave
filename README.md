@@ -88,100 +88,34 @@ Frontend runs on `http://localhost:5173`.
 
 Authenticated endpoints expect `Authorization: Bearer <token>`.
 
-## AWS Deployment Sequence
+## AWS Deployment (Current)
 
-## 1) Create RDS PostgreSQL and Security Groups
+All services run in **ap-southeast-1** (Singapore). Every resource is tagged `Project=MindWeave`.
 
-1. Create RDS PostgreSQL instance (or Aurora PostgreSQL).
-2. Create security group `mindweave-rds-sg`:
-- inbound `5432` from backend security group only.
-3. Create backend/app security group `mindweave-app-sg`.
-4. Set RDS to private subnets if possible.
+| Layer | Service | URL |
+|-------|---------|-----|
+| Frontend | AWS Amplify | `https://main.d2yypbdshi15os.amplifyapp.com` |
+| Backend | AWS App Runner (ECR image) | `https://nvzq43knz6.ap-southeast-1.awsapprunner.com` |
+| Database | Amazon RDS PostgreSQL 16 | `mindweave-db.cd0g6meus64n.ap-southeast-1.rds.amazonaws.com` |
+| Container Registry | Amazon ECR | `140023398409.dkr.ecr.ap-southeast-1.amazonaws.com/mindweave-backend` |
+| CI/CD (backend) | AWS CodeBuild | Project: `mindweave-backend-build` |
 
-## 2) Prisma + Postgres Configuration
+### Backend Redeployment
 
-Already done in this repo:
-- Prisma datasource provider switched to `postgresql`.
-
-Set runtime `DATABASE_URL` to your RDS connection string.
-
-## 3) Run Migrations in Target Environment
-
-In deployed backend container/instance:
+1. Make code changes in `backend/`.
+2. Package and upload to S3, then trigger CodeBuild to build and push Docker image to ECR.
+3. Deploy the new image to App Runner:
 
 ```bash
-npm run db:deploy
+aws apprunner start-deployment --service-arn <service-arn> --region ap-southeast-1
 ```
 
-Seed think tanks once (optional per environment):
+### Frontend Redeployment
 
-```bash
-npm run db:seed
-```
+1. Build locally: `cd frontend && npm run build`
+2. Zip `frontend/dist` and deploy to Amplify via `create-deployment` + `start-deployment` API.
 
-## 4) Containerize Backend and Deploy (ECS or Elastic Beanstalk)
-
-Backend Docker artifacts are included:
-- `backend/Dockerfile`
-- `backend/.dockerignore`
-
-### ECS Fargate path (recommended)
-
-1. Create ECR repo:
-
-```bash
-aws ecr create-repository --repository-name mindweave-backend
-```
-
-2. Build and push image:
-
-```bash
-cd backend
-aws ecr get-login-password --region <region> | docker login --username AWS --password-stdin <account>.dkr.ecr.<region>.amazonaws.com
-docker build -t mindweave-backend .
-docker tag mindweave-backend:latest <account>.dkr.ecr.<region>.amazonaws.com/mindweave-backend:latest
-docker push <account>.dkr.ecr.<region>.amazonaws.com/mindweave-backend:latest
-```
-
-3. Create ECS task definition using that image.
-4. Inject secrets/env vars from Secrets Manager.
-5. Run ECS service behind an Application Load Balancer.
-
-### Elastic Beanstalk path (simpler)
-
-1. Use Docker platform in Beanstalk.
-2. Point app to `backend/Dockerfile`.
-3. Configure environment variables/secrets.
-
-## 5) Deploy Frontend to S3 + CloudFront
-
-1. Build frontend:
-
-```bash
-cd frontend
-npm install
-npm run build
-```
-
-2. Upload `frontend/dist` to S3 static bucket.
-3. Create CloudFront distribution with S3 as origin.
-4. Configure `VITE_API_BASE_URL` before build using `frontend/.env.production.example`.
-
-Example value:
-
-```env
-VITE_API_BASE_URL="https://api.your-domain.com/api"
-```
-
-## 6) Store Secrets in AWS Secrets Manager
-
-Store these keys:
-- `DATABASE_URL`
-- `JWT_SECRET`
-- `GEMINI_API_KEY`
-- `CORS_ORIGIN`
-
-Grant ECS/Beanstalk IAM role permissions to read only required secrets.
+Alternatively, connect Amplify to the GitHub repo for auto-deploys on push.
 
 ## Production Env Variables
 
@@ -197,7 +131,9 @@ Frontend build expects:
 
 ## Deployment Notes
 
-- Use `npm run db:deploy` in production, not `prisma migrate dev`.
+- The Dockerfile runs `prisma db push` on container startup to sync the schema.
+- Demo mode is enabled via `DEMO_MODE=true` env var on App Runner.
+- Frontend `.env.production` must point to the App Runner backend URL.
 - Restrict CORS in production to your CloudFront/custom domain.
 - Keep RDS private and only reachable from backend services.
 - Rotate secrets regularly.

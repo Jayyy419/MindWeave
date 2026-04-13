@@ -13,7 +13,7 @@ This document is a detailed inventory of all major technologies, runtime depende
 - UI components: shadcn/ui primitives
 - Icon library: lucide-react
 - Runtime auth storage: localStorage
-- Hosted as static assets on S3 + CloudFront
+- Hosted on AWS Amplify
 
 ## Backend Layer
 - Runtime: Node.js 20
@@ -34,11 +34,13 @@ This document is a detailed inventory of all major technologies, runtime depende
 ## Cloud Infrastructure Layer
 - AWS account: 140023398409
 - Region: ap-southeast-1
-- Frontend hosting: S3 bucket + CloudFront CDN
-- Backend hosting: Elastic Beanstalk (AL2023 / Node.js 20)
-- Database: RDS PostgreSQL instance
-- Secrets: AWS Secrets Manager
-- Security boundaries: VPC + security groups
+- Frontend hosting: AWS Amplify (`d2yypbdshi15os`)
+- Backend hosting: AWS App Runner (ECR container)
+- Container registry: Amazon ECR (`mindweave-backend`)
+- CI/CD: AWS CodeBuild (`mindweave-backend-build`)
+- Database: RDS PostgreSQL 16 (`mindweave-db`)
+- Build source: S3 (`mindweave-codebuild-source-140023398409`)
+- All resources tagged: `Project=MindWeave`
 
 ---
 

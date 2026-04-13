@@ -16,24 +16,23 @@ MindWeave is a mental-wellness journaling application that uses AI to reframe ne
                     │  HTTPS
                     ▼
 ┌──────────────────────────────────────────────────────────┐
-│  AWS CloudFront CDN  ←── S3 Bucket (static files)        │
-│  d1n2io4499e5zf.cloudfront.net                           │
+│  AWS Amplify  (static hosting, SPA redirect)             │
+│  main.d2yypbdshi15os.amplifyapp.com                      │
 └───────────────────┬──────────────────────────────────────┘
                     │  API requests  (VITE_API_BASE_URL)
                     ▼
 ┌──────────────────────────────────────────────────────────┐
-│  AWS Elastic Beanstalk  (Node.js 20 / Amazon Linux 2023) │
-│  mindweave-backend-prod.eba-pkhkfih2.ap-southeast-1      │
-│  .elasticbeanstalk.com                                   │
+│  AWS App Runner  (Docker container from ECR)              │
+│  nvzq43knz6.ap-southeast-1.awsapprunner.com             │
 │                                                          │
 │  Express 4  ──►  Prisma ORM  ──►  PostgreSQL             │
 │              ──►  Google Gemini API (AI reframing)        │
 └───────────────────┬──────────────────────────────────────┘
-                    │  port 5432 (SG-restricted)
+                    │  port 5432
                     ▼
 ┌──────────────────────────────────────────────────────────┐
-│  AWS RDS PostgreSQL 16.13  (db.t4g.micro)                │
-│  mindweave-postgres.cd0g6meus64n.ap-southeast-1          │
+│  AWS RDS PostgreSQL 16  (db.t4g.micro)                   │
+│  mindweave-db.cd0g6meus64n.ap-southeast-1                │
 │  .rds.amazonaws.com                                      │
 └──────────────────────────────────────────────────────────┘
 ```
@@ -50,10 +49,10 @@ MindWeave is a mental-wellness journaling application that uses AI to reframe ne
 | Database | PostgreSQL 16 (local SQLite in dev) |
 | AI | Google Gemini API (`@google/generative-ai`) |
 | Auth | JWT (jsonwebtoken) + bcrypt password hashing |
-| Hosting — Frontend | AWS S3 + CloudFront |
-| Hosting — Backend | AWS Elastic Beanstalk |
+| Hosting — Frontend | AWS Amplify |
+| Hosting — Backend | AWS App Runner (ECR container) |
 | Database — Prod | AWS RDS PostgreSQL |
-| Secrets | AWS Secrets Manager |
+| CI/CD | AWS CodeBuild → ECR |
 
 ---
 

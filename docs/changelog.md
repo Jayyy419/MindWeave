@@ -2,6 +2,38 @@
 
 This changelog captures the implementation history from the start of this project session through the most recent deployment.
 
+## 2026-04-14 — AWS Migration (App Runner + Amplify) and Demo Mode
+
+### Infrastructure Migration
+- Migrated backend from Elastic Beanstalk to **AWS App Runner** (ECR-based container deployment).
+- Migrated frontend from S3 + CloudFront to **AWS Amplify** (manual deploy).
+- Configured **AWS CodeBuild** (`mindweave-backend-build`) for Docker image builds pushed to ECR.
+- Switched App Runner egress from VPC to DEFAULT to enable outbound internet access (Gemini API).
+- Opened RDS security group for public access (database is password-protected, publicly accessible).
+- Fixed Dockerfile: copies Prisma generated client from build stage to runtime stage.
+- Changed startup command to `prisma db push --skip-generate --accept-data-loss` (bypasses SQLite migration lock mismatch).
+- Fixed `migration_lock.toml` provider from `sqlite` to `postgresql`.
+- Added `console.error` logging for Gemini API failures in `gemini.ts`.
+- Applied SPA redirect rule on Amplify for React Router compatibility.
+- Tagged all AWS resources with `Project=MindWeave` for billing tracking.
+
+### Demo Mode
+- Added frontend demo mode toggle (`frontend/src/config/demo.ts`) with 5-reframe limit using localStorage.
+- Created `DemoLandingPage.tsx` as public entry point.
+- Modified `HomePage.tsx` with demo guards: reframe counter, limit enforcement, save disabled.
+- Modified `Navbar.tsx` to show DEMO MODE badge and hide auth-only navigation in demo mode.
+- Modified `api.ts` to send `x-anonymous-id` header instead of JWT in demo mode.
+- Added backend demo rate limiter (10 req/hr per IP) on `/api/entries/reframe-preview`.
+
+### Documentation
+- Updated root `README.md` with current AWS deployment architecture.
+- Updated `docs/README.md` production URLs and AWS resource inventory.
+- Updated `.gitignore` for AWS deployment artifacts.
+
+### Production URLs
+- Frontend: `https://main.d2yypbdshi15os.amplifyapp.com`
+- Backend: `https://nvzq43knz6.ap-southeast-1.awsapprunner.com`
+
 ## 2026-03-22 - Phase 3 Governance, Admin Controls, and Deployment Hardening
 
 ### Backend Governance and Admin APIs

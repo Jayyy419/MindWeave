@@ -36,16 +36,16 @@ Welcome to the MindWeave documentation. Use the links below to navigate.
 - Backend: `http://localhost:3001`
 
 **Production URLs**
-- Frontend (CloudFront): `https://d1n2io4499e5zf.cloudfront.net`
-- Frontend (Vercel): `https://mindweave.vercel.app`
-- Backend: `http://mindweave-backend-prod.eba-pkhkfih2.ap-southeast-1.elasticbeanstalk.com`
+- Frontend (Amplify): `https://main.d2yypbdshi15os.amplifyapp.com`
+- Backend (App Runner): `https://nvzq43knz6.ap-southeast-1.awsapprunner.com`
 
 **AWS Resources (ap-southeast-1)**
-- RDS endpoint: `mindweave-postgres.cd0g6meus64n.ap-southeast-1.rds.amazonaws.com`
-- S3 bucket: `mindweave-frontend-140023398409-20260315213625`
-- CloudFront ID: `E1IH3MH6OBUQU`
-- Beanstalk app: `mindweave-backend` / env: `mindweave-backend-prod`
-- Secrets Manager: `mindweave/prod/rds-master`, `mindweave/prod/app`
+- RDS endpoint: `mindweave-db.cd0g6meus64n.ap-southeast-1.rds.amazonaws.com`
+- ECR repo: `140023398409.dkr.ecr.ap-southeast-1.amazonaws.com/mindweave-backend`
+- CodeBuild project: `mindweave-backend-build`
+- Amplify app ID: `d2yypbdshi15os`
+- App Runner service: `mindweave-backend`
+- S3 (CodeBuild source): `mindweave-codebuild-source-140023398409`
 
 ## Recommended Reading Order
 

@@ -20,3 +20,13 @@ dist/
 Thumbs.db
 .vercel
 .env*.local
+
+# AWS deployment artifacts
+*.zip
+aws-runtime-secrets.tmp
+buildspec.yml
+apprunner-input.json
+amplify-buildspec.yml
+amplify-rules.json
+cb-*.json
+deploy-*.txt

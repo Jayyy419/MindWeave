@@ -28,6 +28,65 @@ import {
   incrementDemoReframeCount,
   isDemoLimitReached,
 } from "@/config/demo";
+import { GuidedTour, type TourStep } from "@/components/GuidedTour";
+
+const TOUR_STEPS: TourStep[] = [
+  {
+    target: "framework-selector",
+    title: "Choose a Framework",
+    description:
+      "Start by selecting your therapeutic reframing lens. Each framework offers a different way to reframe your thoughts — tap here to compare CBT, Iceberg, and Growth Mindset.",
+  },
+  {
+    target: "countdown-selector",
+    title: "Set Your Countdown",
+    description:
+      "Pick how long to pause after you stop typing before the AI automatically reframes your writing. Choose 3, 5, or 10 seconds.",
+  },
+  {
+    target: "confirm-options",
+    title: "Confirm Your Options",
+    description:
+      "Once you've chosen a framework and countdown, press this button to lock in your options and start writing. You won't be able to change them mid-entry.",
+    placement: "right",
+  },
+  {
+    target: "entry-title",
+    title: "Give It a Title",
+    description:
+      "Name your journal entry — something simple like \"Monday reflections\" or \"Dealing with work stress\" works great.",
+  },
+  {
+    target: "writing-area",
+    title: "Write Freely",
+    description:
+      "This is your journaling space. Write about what happened, how you felt, or what's on your mind. After you pause, the AI will automatically reframe your text using the lens you chose.",
+  },
+  {
+    target: "mood-checkin",
+    title: "Check In With Yourself",
+    description:
+      "Optionally tag how you're feeling and set an intention for this entry. Naming emotions helps reduce their intensity.",
+    placement: "left",
+  },
+  {
+    target: "writing-prompts",
+    title: "Need Inspiration?",
+    description:
+      "If you're not sure what to write, tap any of these reflection prompts to add them to your entry as a starting point.",
+    placement: "left",
+  },
+  ...(DEMO_MODE
+    ? []
+    : [
+        {
+          target: "save-entry",
+          title: "Save Your Entry",
+          description:
+            "When you're done, hit Save to store your journal entry. You can revisit it later in Memory Lane.",
+        },
+      ]),
+];
 
 type FrameworkCategory = "therapeutic" | "cultural";
 
@@ -811,6 +870,7 @@ export function HomePage() {
 
   return (
     <div className="relative left-1/2 right-1/2 -mx-[50vw] w-screen min-h-[calc(100vh-7rem)] bg-[repeating-linear-gradient(to_bottom,#fffef9_0px,#fffef9_34px,#ece7dc_35px)] px-3 py-6 sm:px-5 lg:px-6">
+      <GuidedTour steps={TOUR_STEPS} />
       <div className="mx-auto max-w-[92rem] space-y-6">
 
       {/* Demo mode banner */}
@@ -865,6 +925,7 @@ export function HomePage() {
                 onClick={() => setIsFrameworkModalOpen(true)}
                 className="w-full rounded-xl border border-amber-200 bg-white px-4 py-3 text-left transition-colors hover:border-amber-300"
                 disabled={loading || isConfigLocked}
+                data-tour="framework-selector"
               >
                 <p className="text-xs uppercase tracking-[0.16em] text-amber-700/80">Framework selector</p>
                 <p className="mt-1 text-sm font-medium text-stone-800">
@@ -883,7 +944,7 @@ export function HomePage() {
               )}
             </div>
 
-            <div className="rounded-2xl border border-amber-200/80 bg-white/75 p-4">
+            <div className="rounded-2xl border border-amber-200/80 bg-white/75 p-4" data-tour="countdown-selector">
               <label className="mb-2 block text-sm font-medium text-stone-700">
                 Live reframe countdown
               </label>
@@ -923,6 +984,7 @@ export function HomePage() {
                 onClick={confirmConfiguration}
                 className="mt-3 h-10 w-full bg-amber-700 text-amber-50 hover:bg-amber-800"
                 disabled={loading || isConfigLocked || !framework || !liveReframeDelay}
+                data-tour="confirm-options"
               >
                 {isConfigLocked ? "Options locked for this entry" : "Confirm options"}
               </Button>
@@ -973,9 +1035,10 @@ export function HomePage() {
                 style={{ fontFamily: "Georgia, Cambria, 'Times New Roman', Times, serif" }}
                 maxLength={100}
                 disabled={loading}
+                data-tour="entry-title"
               />
 
-              <div className="relative rounded-xl border border-amber-100 bg-[repeating-linear-gradient(to_bottom,#fffef9_0px,#fffef9_30px,#ece7dc_31px)] p-4">
+              <div className="relative rounded-xl border border-amber-100 bg-[repeating-linear-gradient(to_bottom,#fffef9_0px,#fffef9_30px,#ece7dc_31px)] p-4" data-tour="writing-area">
                 <div className="pointer-events-none absolute inset-y-0 left-8 w-px bg-rose-200/80" />
                 <div className="flex min-h-[320px] flex-col space-y-3 pl-8 pr-2 text-[17px] leading-[31px]" style={{ fontFamily: "'Palatino Linotype', 'Book Antiqua', Palatino, serif" }}>
                   {chunks.map((chunk) => (
@@ -1110,6 +1173,7 @@ export function HomePage() {
               type="submit"
               className="h-11 w-full bg-emerald-700 text-emerald-50 hover:bg-emerald-800"
               disabled={loading || !isConfigLocked}
+              data-tour="save-entry"
             >
               {loading ? (
                 <>
@@ -1124,7 +1188,7 @@ export function HomePage() {
           </form>
 
           <aside className="space-y-4">
-            <Card className="border-amber-200/70 bg-white/80 shadow-none">
+            <Card className="border-amber-200/70 bg-white/80 shadow-none" data-tour="mood-checkin">
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-2">
                   <CardTitle className="text-base text-stone-800">How are you feeling?</CardTitle>
@@ -1216,7 +1280,7 @@ export function HomePage() {
               </div>
             )}
 
-            <Card className="border-amber-200/70 bg-white/80 shadow-none">
+            <Card className="border-amber-200/70 bg-white/80 shadow-none" data-tour="writing-prompts">
               <CardHeader className="pb-3">
                 <CardTitle className="text-base text-stone-800">Writing prompts</CardTitle>
               </CardHeader>
